@@ -1,22 +1,14 @@
 package auth
 
 import (
-	"encoding/json"
+	"context"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 )
 
-type TokenCache struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresAt    int64  `json:"expires_at"`
-	TenantID     string `json:"tenant_id"`
-}
-
-func (t *TokenCache) IsExpired() bool {
-	return time.Now().Unix() >= t.ExpiresAt
-}
+type fileCache struct{}
 
 func getCachePath() (string, error) {
 	home, err := os.UserHomeDir()
@@ -30,41 +22,33 @@ func getCachePath() (string, error) {
 	return filepath.Join(dir, "token.json"), nil
 }
 
-func loadCache() (*TokenCache, error) {
+func (fileCache) Replace(ctx context.Context, cache cache.Unmarshaler, hints cache.ReplaceHints) error {
 	path, err := getCachePath()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	b, err := os.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
 	}
 
-	var cache TokenCache
-	if err := json.Unmarshal(b, &cache); err != nil {
-		return nil, err
-	}
-	return &cache, nil
+	return cache.Unmarshal(data)
 }
 
-func saveCache(tr *TokenResponse, tenantID string) error {
+func (fileCache) Export(ctx context.Context, cache cache.Marshaler, hints cache.ExportHints) error {
+	data, err := cache.Marshal()
+	if err != nil {
+		return err
+	}
+
 	path, err := getCachePath()
 	if err != nil {
 		return err
 	}
 
-	cache := TokenCache{
-		AccessToken:  tr.AccessToken,
-		RefreshToken: tr.RefreshToken,
-		ExpiresAt:    time.Now().Unix() + int64(tr.ExpiresIn) - 300,
-		TenantID:     tenantID,
-	}
-
-	b, err := json.MarshalIndent(cache, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(path, b, 0600)
+	return os.WriteFile(path, data, 0600)
 }
