@@ -1,8 +1,7 @@
-package cmd
+package cli
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"os/signal"
@@ -34,7 +33,7 @@ type CLI struct {
 	fs *pflag.FlagSet
 }
 
-func NewCLI() *CLI {
+func New() *CLI {
 	return &CLI{
 		fs: pflag.NewFlagSet("azsh", pflag.ContinueOnError),
 	}
@@ -46,7 +45,7 @@ func (c *CLI) handleConnect(args []string) error {
 	}
 
 	fs := pflag.NewFlagSet("connect", pflag.ContinueOnError)
-	fs.StringVar(&opts.Shell, "shell", defaultShellType, "Shell type (bash or zsh)")
+	fs.StringVar(&opts.Shell, "shell", defaultShellType, "Shell type (bash or pwsh)")
 	fs.StringVar(&opts.Location, "location", "", "Preferred location for Cloud Shell")
 
 	if err := fs.Parse(args); err != nil {
@@ -66,12 +65,11 @@ func (c *CLI) handleHelp() {
 Commands:
   connect              Connect to Azure Cloud Shell (default)
   logout               Logout and clear cached credentials
-  help                 Show this help message
 
 Connect Flags:
   --shell string       Shell type to use: bash or pwsh (default: bash)
   --location string    Preferred location for Cloud Shell
-  -h, --help          Show help message
+  --help               Show help message
 
 Examples:
   azsh                                    # Connect with defaults
@@ -133,13 +131,13 @@ func handleWindowResize(token, consoleURI, terminalID string) {
 }
 
 func connectCloudShell(opts *ConnectOptions) error {
-	log.Println("Authenticating...")
+	fmt.Println("Authenticating...")
 	token, err := auth.GetToken()
 	if err != nil {
 		return fmt.Errorf("failed to get auth token: %w", err)
 	}
 
-	log.Println("Fetching user settings...")
+	fmt.Println("Fetching user settings...")
 	settings, err := cloudshell.UserSettings(token)
 	if err != nil {
 		return fmt.Errorf("failed to get user settings: %w", err)
@@ -150,12 +148,12 @@ func connectCloudShell(opts *ConnectOptions) error {
 		location = settings.PreferredLocation
 	}
 
-	log.Print("Requesting a Cloud Shell. ")
+	fmt.Print("Requesting a Cloud Shell. ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, defaultOSType, location)
 	if err != nil {
 		return fmt.Errorf("failed to provision console: %w", err)
 	}
-	log.Println("Succeeded.")
+	fmt.Println("Succeeded.")
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
@@ -163,7 +161,7 @@ func connectCloudShell(opts *ConnectOptions) error {
 		height = defaultHeight
 	}
 
-	log.Println("Connecting terminal...")
+	fmt.Println("Connecting terminal...")
 	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, opts.Shell, width, height)
 	if err != nil {
 		return fmt.Errorf("failed to negotiate terminal: %w", err)

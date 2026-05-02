@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 )
@@ -72,7 +71,7 @@ func Auth() (string, error) {
 		return "", err
 	}
 
-	log.Println(dc.Result.Message)
+	fmt.Println(dc.Result.Message)
 
 	deviceCtx := ctx
 	if !dc.Result.ExpiresOn.IsZero() {

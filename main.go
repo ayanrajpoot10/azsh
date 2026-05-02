@@ -1,15 +1,16 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 
-	"github.com/ayanrajpoot10/azsh/internal/cmd"
+	"github.com/ayanrajpoot10/azsh/internal/cli"
 )
 
 func main() {
-	cli := cmd.NewCLI()
-	if err := cli.Run(os.Args[1:]); err != nil {
-		log.Fatalf("Error: %v", err)
+	c := cli.New()
+	if err := c.Run(os.Args[1:]); err != nil {
+		fmt.Println("Error: %v", err)
+		os.Exit(1)
 	}
 }
