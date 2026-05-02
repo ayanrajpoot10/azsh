@@ -20,7 +20,7 @@ A lightweight CLI tool to access Azure Cloud Shell directly from your terminal.
 ### From Source
 
 ```bash
-go install github.com/ayanrajpoot10/azsh
+go install github.com/ayanrajpoot10/azsh@latest
 ```
 
 ## Usage
