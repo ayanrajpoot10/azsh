@@ -10,9 +10,9 @@ import (
 
 	"golang.org/x/term"
 
-	"azsh/internal/auth"
-	"azsh/internal/cloudshell"
-	"azsh/internal/terminal"
+	"github.com/ayanrajpoot10/azsh/internal/auth"
+	"github.com/ayanrajpoot10/azsh/internal/cloudshell"
+	"github.com/ayanrajpoot10/azsh/internal/terminal"
 )
 
 func main() {

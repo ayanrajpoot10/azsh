@@ -1,4 +1,4 @@
-module azsh
+module github.com/ayanrajpoot10/azsh
 
 go 1.26.2
 
