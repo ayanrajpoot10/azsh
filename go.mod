@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.1
 	github.com/coder/websocket v1.8.14
+	github.com/spf13/pflag v1.0.10
 	golang.org/x/term v0.42.0
 )
 
@@ -13,6 +14,5 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 )
