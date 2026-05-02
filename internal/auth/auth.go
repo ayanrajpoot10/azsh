@@ -98,14 +98,12 @@ func RefreshTokenWithTenant(tenant string) (string, error) {
 	return token, nil
 }
 
-func GetToken(forceLogin bool) (string, error) {
-	if !forceLogin {
-		tenant, _ := readCachedTenant()
+func GetToken() (string, error) {
+	tenant, _ := readCachedTenant()
 
-		if tenant != "" {
-			if token, err := RefreshTokenWithTenant(tenant); err == nil {
-				return token, nil
-			}
+	if tenant != "" {
+		if token, err := RefreshTokenWithTenant(tenant); err == nil {
+			return token, nil
 		}
 	}
 

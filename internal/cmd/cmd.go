@@ -26,9 +26,8 @@ const (
 )
 
 type ConnectOptions struct {
-	Shell      string
-	Location   string
-	ForceLogin bool
+	Shell    string
+	Location string
 }
 
 type CLI struct {
@@ -49,7 +48,6 @@ func (c *CLI) handleConnect(args []string) error {
 	fs := pflag.NewFlagSet("connect", pflag.ContinueOnError)
 	fs.StringVar(&opts.Shell, "shell", defaultShellType, "Shell type (bash or zsh)")
 	fs.StringVar(&opts.Location, "location", "", "Preferred location for Cloud Shell")
-	fs.BoolVar(&opts.ForceLogin, "force-login", false, "Force login even if credentials are cached")
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("invalid flags: %w", err)
@@ -71,16 +69,14 @@ Commands:
   help                 Show this help message
 
 Connect Flags:
-  --shell string       Shell type to use: bash or zsh (default: bash)
+  --shell string       Shell type to use: bash or pwsh (default: bash)
   --location string    Preferred location for Cloud Shell
-  --force-login        Force login even if credentials are cached
   -h, --help          Show help message
 
 Examples:
   azsh                                    # Connect with defaults
-  azsh connect --shell pwsh               # Connect with powershell
+  azsh connect --shell pwsh               # Connect with PowerShell
   azsh connect --location eastus          # Connect to specific location
-  azsh connect --force-login              # Force login prompt
   azsh logout                             # Logout and clear cache
 `
 	fmt.Print(help)
@@ -138,7 +134,7 @@ func handleWindowResize(token, consoleURI, terminalID string) {
 
 func connectCloudShell(opts *ConnectOptions) error {
 	log.Println("Authenticating...")
-	token, err := auth.GetToken(opts.ForceLogin)
+	token, err := auth.GetToken()
 	if err != nil {
 		return fmt.Errorf("failed to get auth token: %w", err)
 	}
