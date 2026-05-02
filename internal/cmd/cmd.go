@@ -18,6 +18,7 @@ import (
 
 const (
 	defaultShellType = "bash"
+	defaultOSType    = "Linux"
 	defaultWidth     = 120
 	defaultHeight    = 30
 	wsScheme         = "wss"
@@ -26,7 +27,6 @@ const (
 
 type ConnectOptions struct {
 	Shell      string
-	OSType     string
 	Location   string
 	ForceLogin bool
 }
@@ -48,7 +48,6 @@ func (c *CLI) handleConnect(args []string) error {
 
 	fs := pflag.NewFlagSet("connect", pflag.ContinueOnError)
 	fs.StringVar(&opts.Shell, "shell", defaultShellType, "Shell type (bash or zsh)")
-	fs.StringVar(&opts.OSType, "ostype", "", "OS type (Linux or Windows)")
 	fs.StringVar(&opts.Location, "location", "", "Preferred location for Cloud Shell")
 	fs.BoolVar(&opts.ForceLogin, "force-login", false, "Force login even if credentials are cached")
 
@@ -72,16 +71,14 @@ Commands:
   help                 Show this help message
 
 Connect Flags:
-  --shell string       Shell type to use (default: bash)
-  --ostype string      Operating system type (Linux or Windows)
-  --location string    Preferred Cloud Shell location
+  --shell string       Shell type to use: bash or zsh (default: bash)
+  --location string    Preferred location for Cloud Shell
   --force-login        Force login even if credentials are cached
   -h, --help          Show help message
 
 Examples:
   azsh                                    # Connect with defaults
-  azsh connect --shell bash               # Connect with bash shell
-  azsh connect --ostype Linux             # Connect to Linux Cloud Shell
+  azsh connect --shell zsh                # Connect with zsh shell
   azsh connect --location eastus          # Connect to specific location
   azsh connect --force-login              # Force login prompt
   azsh logout                             # Logout and clear cache
@@ -152,18 +149,13 @@ func connectCloudShell(opts *ConnectOptions) error {
 		return fmt.Errorf("failed to get user settings: %w", err)
 	}
 
-	osType := opts.OSType
-	if osType == "" {
-		osType = settings.PreferredOsType
-	}
-
 	location := opts.Location
 	if location == "" {
 		location = settings.PreferredLocation
 	}
 
 	log.Print("Requesting a Cloud Shell. ")
-	consoleRes, err := cloudshell.ProvisionConsole(token, osType, location)
+	consoleRes, err := cloudshell.ProvisionConsole(token, defaultOSType, location)
 	if err != nil {
 		return fmt.Errorf("failed to provision console: %w", err)
 	}
