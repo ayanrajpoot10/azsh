@@ -15,8 +15,6 @@ const (
 	userAgent       = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
 
 	terminalVersion = "2019-01-01"
-	statusOK        = 200
-	statusCreated   = 201
 )
 
 var client = &http.Client{}
@@ -79,7 +77,7 @@ func executeRequest(req *http.Request) (*http.Response, []byte, error) {
 
 func checkStatus(statusCode int, allowedCodes ...int) error {
 	if len(allowedCodes) == 0 {
-		allowedCodes = []int{statusOK}
+		allowedCodes = []int{http.StatusOK}
 	}
 
 	for _, code := range allowedCodes {
@@ -136,7 +134,7 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 		return nil, err
 	}
 
-	if err := checkStatus(resp.StatusCode, statusOK, statusCreated); err != nil {
+	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
 		return nil, fmt.Errorf("console provisioning failed: %s, response: %s", resp.Status, string(data))
 	}
 
