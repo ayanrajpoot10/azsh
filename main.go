@@ -26,10 +26,12 @@ func main() {
 		log.Fatalf("failed to get user settings: %v", err)
 	}
 
+	log.Print("Requesting a Cloud Shell. ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		log.Fatalf("failed to provision console: %v", err)
 	}
+	log.Println("Succeeded.")
 
 	shellType := "bash"
 
@@ -38,6 +40,8 @@ func main() {
 		width = 120
 		height = 30
 	}
+
+	log.Println("Connecting terminal...")
 
 	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, shellType, width, height)
 	if err != nil {

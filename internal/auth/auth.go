@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 )
@@ -49,7 +50,7 @@ func Auth() (string, error) {
 		return "", err
 	}
 
-	fmt.Println(dc.Result.Message)
+	log.Println(dc.Result.Message)
 
 	deviceCtx := ctx
 	if !dc.Result.ExpiresOn.IsZero() {
@@ -100,6 +101,12 @@ func RefreshTokenWithTenant(tenant string) (string, error) {
 }
 
 func GetToken() (string, error) {
+	if tenant, err := readCachedTenant(); err == nil && tenant != "" {
+		if token, err := RefreshTokenWithTenant(tenant); err == nil {
+			return token, nil
+		}
+	}
+
 	token, err := Auth()
 	if err != nil {
 		return "", err
@@ -112,6 +119,10 @@ func GetToken() (string, error) {
 
 	if tenant == "" {
 		return "", fmt.Errorf("no tenant found")
+	}
+
+	if err := writeCachedTenant(tenant); err != nil {
+		return "", err
 	}
 
 	token, err = RefreshTokenWithTenant(tenant)
