@@ -78,7 +78,7 @@ Connect Flags:
 
 Examples:
   azsh                                    # Connect with defaults
-  azsh connect --shell zsh                # Connect with zsh shell
+  azsh connect --shell pwsh               # Connect with powershell
   azsh connect --location eastus          # Connect to specific location
   azsh connect --force-login              # Force login prompt
   azsh logout                             # Logout and clear cache
@@ -186,4 +186,3 @@ func connectCloudShell(opts *ConnectOptions) error {
 
 	return nil
 }
-
