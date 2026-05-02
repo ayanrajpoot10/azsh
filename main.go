@@ -15,64 +15,92 @@ import (
 	"github.com/ayanrajpoot10/azsh/internal/terminal"
 )
 
-func main() {
-	token, err := auth.GetToken()
+const (
+	defaultShellType = "bash"
+	defaultWidth     = 120
+	defaultHeight    = 30
+	wsScheme         = "wss"
+	terminalPath     = "/$hc/%s/terminals/%s"
+)
+
+func buildWebSocketURL(consoleURI string, terminalID string) (string, error) {
+	u, err := url.Parse(consoleURI)
 	if err != nil {
-		log.Fatalf("failed to get auth token: %v", err)
+		return "", err
 	}
 
+	u.Scheme = wsScheme
+	path := u.Path
+	if len(path) > 0 && path[0] == '/' {
+		path = path[1:]
+	}
+	u.Path = fmt.Sprintf(terminalPath, path, terminalID)
+
+	return u.String(), nil
+}
+
+func handleWindowResize(token, consoleURI, terminalID string) {
+	sigWinch := make(chan os.Signal, 1)
+	signal.Notify(sigWinch, syscall.SIGWINCH)
+
+	go func() {
+		for range sigWinch {
+			w, h, err := term.GetSize(int(os.Stdout.Fd()))
+			if err == nil {
+				cloudshell.ResizeTerminal(token, consoleURI, terminalID, w, h)
+			}
+		}
+	}()
+}
+
+func run() error {
+	log.Println("Authenticating...")
+	token, err := auth.GetToken()
+	if err != nil {
+		return fmt.Errorf("failed to get auth token: %w", err)
+	}
+
+	log.Println("Fetching user settings...")
 	settings, err := cloudshell.UserSettings(token)
 	if err != nil {
-		log.Fatalf("failed to get user settings: %v", err)
+		return fmt.Errorf("failed to get user settings: %w", err)
 	}
 
 	log.Print("Requesting a Cloud Shell. ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
-		log.Fatalf("failed to provision console: %v", err)
+		return fmt.Errorf("failed to provision console: %w", err)
 	}
 	log.Println("Succeeded.")
 
-	shellType := "bash"
-
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		width = 120
-		height = 30
+		width = defaultWidth
+		height = defaultHeight
 	}
 
 	log.Println("Connecting terminal...")
-
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, shellType, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, defaultShellType, width, height)
 	if err != nil {
-		log.Fatalf("failed to negotiate terminal: %v", err)
+		return fmt.Errorf("failed to negotiate terminal: %w", err)
 	}
 
-	u, err := url.Parse(consoleRes.Properties.URI)
+	wsURL, err := buildWebSocketURL(consoleRes.Properties.URI, terminalInfo.ID)
 	if err != nil {
-		log.Fatalf("failed to parse console URI: %v", err)
+		return fmt.Errorf("failed to build websocket URL: %w", err)
 	}
 
-	u.Scheme = "wss"
-	path := u.Path
-	if len(path) > 0 && path[0] == '/' {
-		path = path[1:]
+	handleWindowResize(token, consoleRes.Properties.URI, terminalInfo.ID)
+
+	if err := terminal.Connect(wsURL); err != nil {
+		return fmt.Errorf("websocket connection error: %w", err)
 	}
-	u.Path = fmt.Sprintf("/$hc/%s/terminals/%s", path, terminalInfo.ID)
 
-	sigWinch := make(chan os.Signal, 1)
-	signal.Notify(sigWinch, syscall.SIGWINCH)
-	go func() {
-		for range sigWinch {
-			w, h, err := term.GetSize(int(os.Stdout.Fd()))
-			if err == nil {
-				cloudshell.ResizeTerminal(token, consoleRes.Properties.URI, terminalInfo.ID, w, h)
-			}
-		}
-	}()
+	return nil
+}
 
-	err = terminal.Connect(u.String())
-	if err != nil {
-		log.Fatalf("WebSocket connection error: %v", err)
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("%v", err)
 	}
 }
