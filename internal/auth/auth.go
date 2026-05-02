@@ -9,24 +9,28 @@ import (
 )
 
 const (
-	clientID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
-	tenantID = "organizations"
+	clientID         = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
+	defaultTenantID  = "organizations"
+	msLoginBase      = "https://login.microsoftonline.com"
+	defaultScope     = "https://management.core.windows.net//.default"
 )
 
-var defaultScopes = []string{"https://management.core.windows.net//.default"}
+var defaultScopes = []string{defaultScope}
 
-func Auth() (string, error) {
-	client, err := public.New(
+func newMSALClient(tenant string) (public.Client, error) {
+	return public.New(
 		clientID,
-		public.WithAuthority(fmt.Sprintf("https://login.microsoftonline.com/%s", tenantID)),
+		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
 		public.WithCache(fileCache{}),
 		public.WithHTTPClient(httpClient),
 	)
+}
+
+func acquireToken(ctx context.Context, tenant string) (string, error) {
+	client, err := newMSALClient(tenant)
 	if err != nil {
 		return "", err
 	}
-
-	ctx := context.Background()
 
 	accounts, err := client.Accounts(ctx)
 	if err != nil {
@@ -34,8 +38,10 @@ func Auth() (string, error) {
 	}
 
 	for _, account := range accounts {
-		opts := []public.AcquireSilentOption{public.WithSilentAccount(account)}
-		opts = append(opts, public.WithTenantID(tenantID))
+		opts := []public.AcquireSilentOption{
+			public.WithSilentAccount(account),
+			public.WithTenantID(tenant),
+		}
 
 		result, err := client.AcquireTokenSilent(ctx, defaultScopes, opts...)
 		if err != nil {
@@ -45,7 +51,23 @@ func Auth() (string, error) {
 		return result.AccessToken, nil
 	}
 
-	dc, err := client.AcquireTokenByDeviceCode(ctx, defaultScopes, public.WithTenantID(tenantID))
+	return "", fmt.Errorf("no cached token found")
+}
+
+func Auth() (string, error) {
+	ctx := context.Background()
+
+	token, err := acquireToken(ctx, defaultTenantID)
+	if err == nil {
+		return token, nil
+	}
+
+	client, err := newMSALClient(defaultTenantID)
+	if err != nil {
+		return "", err
+	}
+
+	dc, err := client.AcquireTokenByDeviceCode(ctx, defaultScopes, public.WithTenantID(defaultTenantID))
 	if err != nil {
 		return "", err
 	}
@@ -68,40 +90,18 @@ func Auth() (string, error) {
 }
 
 func RefreshTokenWithTenant(tenant string) (string, error) {
-	client, err := public.New(
-		clientID,
-		public.WithAuthority(fmt.Sprintf("https://login.microsoftonline.com/%s", tenant)),
-		public.WithCache(fileCache{}),
-		public.WithHTTPClient(httpClient),
-	)
-	if err != nil {
-		return "", err
-	}
-
 	ctx := context.Background()
-
-	accounts, err := client.Accounts(ctx)
+	token, err := acquireToken(ctx, tenant)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to acquire token for tenant %s: %w", tenant, err)
 	}
-
-	for _, account := range accounts {
-		opts := []public.AcquireSilentOption{public.WithSilentAccount(account)}
-		opts = append(opts, public.WithTenantID(tenant))
-
-		result, err := client.AcquireTokenSilent(ctx, defaultScopes, opts...)
-		if err != nil {
-			continue
-		}
-
-		return result.AccessToken, nil
-	}
-
-	return "", fmt.Errorf("failed to acquire tenant token for tenant %s", tenant)
+	return token, nil
 }
 
 func GetToken() (string, error) {
-	if tenant, err := readCachedTenant(); err == nil && tenant != "" {
+	tenant, _ := readCachedTenant()
+	
+	if tenant != "" {
 		if token, err := RefreshTokenWithTenant(tenant); err == nil {
 			return token, nil
 		}
@@ -112,20 +112,16 @@ func GetToken() (string, error) {
 		return "", err
 	}
 
-	tenant, err := GetTenant(token)
+	newTenant, err := GetTenant(token)
 	if err != nil {
 		return "", err
 	}
 
-	if tenant == "" {
-		return "", fmt.Errorf("no tenant found")
-	}
-
-	if err := writeCachedTenant(tenant); err != nil {
+	if err := writeCachedTenant(newTenant); err != nil {
 		return "", err
 	}
 
-	token, err = RefreshTokenWithTenant(tenant)
+	token, err = RefreshTokenWithTenant(newTenant)
 	if err != nil {
 		return "", err
 	}

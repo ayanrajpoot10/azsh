@@ -11,25 +11,31 @@ import (
 
 type fileCache struct{}
 
-func getCachePath() (string, error) {
+const configDir = ".azsh"
+
+func getCacheDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	dir := filepath.Join(home, ".azsh")
+	dir := filepath.Join(home, configDir)
 	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
+func getCachePath() (string, error) {
+	dir, err := getCacheDir()
+	if err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, "token.json"), nil
 }
 
 func getTenantPath() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := getCacheDir()
 	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".azsh")
-	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, "tenant.json"), nil
