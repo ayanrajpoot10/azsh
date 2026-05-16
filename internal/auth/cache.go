@@ -11,9 +11,17 @@ import (
 
 type fileCache struct{}
 
-const configDir = ".azsh"
+type tenantPayload struct {
+	TenantID string `json:"tenantId"`
+}
 
-func getCacheDir() (string, error) {
+const (
+	configDir  = ".azsh"
+	tenantFile = "tenant.json"
+	tokenFile  = "token.json"
+)
+
+func getFilePath(filename string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -22,27 +30,11 @@ func getCacheDir() (string, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
-	return dir, nil
-}
-
-func getCachePath() (string, error) {
-	dir, err := getCacheDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "token.json"), nil
-}
-
-func getTenantPath() (string, error) {
-	dir, err := getCacheDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "tenant.json"), nil
+	return filepath.Join(dir, filename), nil
 }
 
 func readCachedTenant() (string, error) {
-	path, err := getTenantPath()
+	path, err := getFilePath(tenantFile)
 	if err != nil {
 		return "", err
 	}
@@ -55,9 +47,7 @@ func readCachedTenant() (string, error) {
 		return "", err
 	}
 
-	var payload struct {
-		TenantID string `json:"tenantId"`
-	}
+	var payload tenantPayload
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return "", err
 	}
@@ -70,14 +60,12 @@ func writeCachedTenant(tenant string) error {
 		return nil
 	}
 
-	path, err := getTenantPath()
+	path, err := getFilePath(tenantFile)
 	if err != nil {
 		return err
 	}
 
-	data, err := json.Marshal(struct {
-		TenantID string `json:"tenantId"`
-	}{TenantID: tenant})
+	data, err := json.Marshal(tenantPayload{TenantID: tenant})
 	if err != nil {
 		return err
 	}
@@ -85,8 +73,8 @@ func writeCachedTenant(tenant string) error {
 	return os.WriteFile(path, data, 0600)
 }
 
-func (fileCache) Replace(ctx context.Context, cache cache.Unmarshaler, hints cache.ReplaceHints) error {
-	path, err := getCachePath()
+func (fileCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.ReplaceHints) error {
+	path, err := getFilePath(tokenFile)
 	if err != nil {
 		return err
 	}
@@ -99,16 +87,16 @@ func (fileCache) Replace(ctx context.Context, cache cache.Unmarshaler, hints cac
 		return err
 	}
 
-	return cache.Unmarshal(data)
+	return c.Unmarshal(data)
 }
 
-func (fileCache) Export(ctx context.Context, cache cache.Marshaler, hints cache.ExportHints) error {
-	data, err := cache.Marshal()
+func (fileCache) Export(ctx context.Context, c cache.Marshaler, hints cache.ExportHints) error {
+	data, err := c.Marshal()
 	if err != nil {
 		return err
 	}
 
-	path, err := getCachePath()
+	path, err := getFilePath(tokenFile)
 	if err != nil {
 		return err
 	}

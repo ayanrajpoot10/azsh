@@ -5,9 +5,8 @@ import (
 	"os"
 )
 
-// Logout removes the cached token file
 func Logout() error {
-	path, err := getCachePath()
+	path, err := getFilePath(tokenFile)
 	if err != nil {
 		return err
 	}
@@ -19,6 +18,6 @@ func Logout() error {
 		return fmt.Errorf("failed to clear cache: %w", err)
 	}
 
-	fmt.Println("Logged out successfully. Cached credentials have been removed.")
+	fmt.Println("Logged out successfully.")
 	return nil
 }
