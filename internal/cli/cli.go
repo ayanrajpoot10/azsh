@@ -90,13 +90,13 @@ func handleWindowResize(token, consoleURI, terminalID string) {
 
 func connectCloudShell() error {
 	fmt.Println("Authenticating...")
-	token, err := auth.GetToken()
+	token, err := auth.Token()
 	if err != nil {
 		return fmt.Errorf("failed to get auth token: %w", err)
 	}
 
 	fmt.Println("Fetching user settings...")
-	settings, err := cloudshell.UserSettings(token)
+	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
 		return fmt.Errorf("failed to get user settings: %w", err)
 	}

@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	clientID         = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
-	defaultTenantID  = "organizations"
-	msLoginBase      = "https://login.microsoftonline.com"
-	defaultScope     = "https://management.core.windows.net//.default"
+	clientID        = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
+	defaultTenantID = "organizations"
+	msLoginBase     = "https://login.microsoftonline.com"
+	defaultScope    = "https://management.core.windows.net//.default"
 )
 
 var defaultScopes = []string{defaultScope}
@@ -53,7 +53,7 @@ func acquireToken(ctx context.Context, tenant string) (string, error) {
 	return "", fmt.Errorf("no cached token found")
 }
 
-func Auth() (string, error) {
+func deviceCodeLogin() (string, error) {
 	ctx := context.Background()
 
 	token, err := acquireToken(ctx, defaultTenantID)
@@ -88,7 +88,7 @@ func Auth() (string, error) {
 	return result.AccessToken, nil
 }
 
-func RefreshTokenWithTenant(tenant string) (string, error) {
+func refreshTokenWithTenant(tenant string) (string, error) {
 	ctx := context.Background()
 	token, err := acquireToken(ctx, tenant)
 	if err != nil {
@@ -97,21 +97,21 @@ func RefreshTokenWithTenant(tenant string) (string, error) {
 	return token, nil
 }
 
-func GetToken() (string, error) {
+func Token() (string, error) {
 	tenant, _ := readCachedTenant()
 
 	if tenant != "" {
-		if token, err := RefreshTokenWithTenant(tenant); err == nil {
+		if token, err := refreshTokenWithTenant(tenant); err == nil {
 			return token, nil
 		}
 	}
 
-	token, err := Auth()
+	token, err := deviceCodeLogin()
 	if err != nil {
 		return "", err
 	}
 
-	newTenant, err := GetTenant(token)
+	newTenant, err := SelectTenant(token)
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +120,7 @@ func GetToken() (string, error) {
 		return "", err
 	}
 
-	token, err = RefreshTokenWithTenant(newTenant)
+	token, err = refreshTokenWithTenant(newTenant)
 	if err != nil {
 		return "", err
 	}

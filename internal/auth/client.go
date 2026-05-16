@@ -45,8 +45,7 @@ func getTenants(token string) ([]Tenant, error) {
 	return tr.Value, nil
 }
 
-// GetTenant fetches the tenant ID, with interactive selection if multiple tenants are available
-func GetTenant(token string) (string, error) {
+func SelectTenant(token string) (string, error) {
 	tenants, err := getTenants(token)
 	if err != nil {
 		return "", err

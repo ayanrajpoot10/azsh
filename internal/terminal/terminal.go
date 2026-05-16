@@ -30,15 +30,15 @@ func setupTerminal() (func() error, error) {
 	return restore, nil
 }
 
-func readFromWebSocket(ctx context.Context, conn *websocket.Conn, errC chan error) {
+func readFromWebSocket(ctx context.Context, conn *websocket.Conn, errCh chan error) {
 	for {
 		_, message, err := conn.Read(ctx)
 		if err != nil {
 			status := websocket.CloseStatus(err)
 			if isNormalClose(status) {
-				errC <- nil
+				errCh <- nil
 			} else {
-				errC <- fmt.Errorf("read error: %v", err)
+				errCh <- fmt.Errorf("read error: %v", err)
 			}
 			return
 		}
@@ -46,18 +46,18 @@ func readFromWebSocket(ctx context.Context, conn *websocket.Conn, errC chan erro
 	}
 }
 
-func writeToWebSocket(ctx context.Context, conn *websocket.Conn, errC chan error) {
+func writeToWebSocket(ctx context.Context, conn *websocket.Conn, errCh chan error) {
 	buf := make([]byte, readBufferSize)
 	for {
 		n, err := os.Stdin.Read(buf)
 		if err != nil {
-			errC <- err
+			errCh <- err
 			return
 		}
 
 		err = conn.Write(ctx, websocket.MessageText, buf[:n])
 		if err != nil {
-			errC <- err
+			errCh <- err
 			return
 		}
 	}
@@ -80,10 +80,10 @@ func Connect(wsURI string) error {
 	}
 	defer restore()
 
-	errC := make(chan error, 1)
+	errCh := make(chan error, 1)
 
-	go readFromWebSocket(ctx, conn, errC)
-	go writeToWebSocket(ctx, conn, errC)
+	go readFromWebSocket(ctx, conn, errCh)
+	go writeToWebSocket(ctx, conn, errCh)
 
-	return <-errC
+	return <-errCh
 }
