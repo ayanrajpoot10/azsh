@@ -3,25 +3,13 @@ package terminal
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/coder/websocket"
 	"golang.org/x/term"
 )
 
-const (
-	consoleOrigin = "https://ux.console.azure.com"
-	userAgent     = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
-	readBufferSize = 1024
-)
-
-func createDialHeader() http.Header {
-	header := http.Header{}
-	header.Set("Origin", consoleOrigin)
-	header.Set("User-Agent", userAgent)
-	return header
-}
+const readBufferSize = 1024
 
 func isNormalClose(status websocket.StatusCode) bool {
 	return status == websocket.StatusNormalClosure ||
@@ -75,14 +63,9 @@ func writeToWebSocket(ctx context.Context, conn *websocket.Conn, errC chan error
 	}
 }
 
-// Connect establishes a WebSocket connection to the cloud shell terminal
 func Connect(wsURI string) error {
 	ctx := context.Background()
-
-	header := createDialHeader()
-	conn, resp, err := websocket.Dial(ctx, wsURI, &websocket.DialOptions{
-		HTTPHeader: header,
-	})
+	conn, resp, err := websocket.Dial(ctx, wsURI, nil)
 	if err != nil {
 		if resp != nil {
 			return fmt.Errorf("websocket dial failed: %v (HTTP %d)", err, resp.StatusCode)

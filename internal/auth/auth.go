@@ -16,7 +16,7 @@ const (
 
 var defaultScopes = []string{defaultScope}
 
-func newMSALClient(tenant string) (public.Client, error) {
+func newClient(tenant string) (public.Client, error) {
 	return public.New(
 		clientID,
 		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
@@ -26,7 +26,7 @@ func newMSALClient(tenant string) (public.Client, error) {
 }
 
 func acquireToken(ctx context.Context, tenant string) (string, error) {
-	client, err := newMSALClient(tenant)
+	client, err := newClient(tenant)
 	if err != nil {
 		return "", err
 	}
@@ -61,7 +61,7 @@ func Auth() (string, error) {
 		return token, nil
 	}
 
-	client, err := newMSALClient(defaultTenantID)
+	client, err := newClient(defaultTenantID)
 	if err != nil {
 		return "", err
 	}

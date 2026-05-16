@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/spf13/pflag"
 	"golang.org/x/term"
 
 	"github.com/ayanrajpoot10/azsh/internal/auth"
@@ -24,76 +23,35 @@ const (
 	terminalPath     = "/$hc/%s/terminals/%s"
 )
 
-type ConnectOptions struct {
-	Shell    string
-	Location string
-}
-
-type CLI struct {
-	fs *pflag.FlagSet
-}
-
-func New() *CLI {
-	return &CLI{
-		fs: pflag.NewFlagSet("azsh", pflag.ContinueOnError),
-	}
-}
-
-func (c *CLI) handleConnect(args []string) error {
-	opts := &ConnectOptions{
-		Shell: defaultShellType,
-	}
-
-	fs := pflag.NewFlagSet("connect", pflag.ContinueOnError)
-	fs.StringVar(&opts.Shell, "shell", defaultShellType, "Shell type (bash or pwsh)")
-	fs.StringVar(&opts.Location, "location", "", "Preferred location for Cloud Shell")
-
-	if err := fs.Parse(args); err != nil {
-		return fmt.Errorf("invalid flags: %w", err)
-	}
-
-	return connectCloudShell(opts)
-}
-
-func (c *CLI) handleLogout() error {
+func handleLogout() error {
 	return auth.Logout()
 }
 
-func (c *CLI) handleHelp() {
-	help := `Usage: azsh [command] [flags]
+func handleHelp() {
+	help := `Usage: azsh [command]
 
 Commands:
-  connect              Connect to Azure Cloud Shell (default)
   logout               Logout and clear cached credentials
-
-Connect Flags:
-  --shell string       Shell type to use: bash or pwsh (default: bash)
-  --location string    Preferred location for Cloud Shell
-  --help               Show help message
 
 Examples:
   azsh                                    # Connect with defaults
-  azsh connect --shell pwsh               # Connect with PowerShell
-  azsh connect --location eastus          # Connect to specific location
   azsh logout                             # Logout and clear cache
 `
 	fmt.Print(help)
 }
 
-func (c *CLI) Run(args []string) error {
+func Run(args []string) error {
 	if len(args) == 0 {
-		return c.handleConnect([]string{})
+		return connectCloudShell()
 	}
 
 	command := args[0]
 
 	switch command {
-	case "connect":
-		return c.handleConnect(args[1:])
 	case "logout":
-		return c.handleLogout()
+		return handleLogout()
 	case "help", "-h", "--help":
-		c.handleHelp()
+		handleHelp()
 		return nil
 	default:
 		return fmt.Errorf("unknown command: %s\n\nUse 'azsh help' for usage information", command)
@@ -130,7 +88,7 @@ func handleWindowResize(token, consoleURI, terminalID string) {
 	}()
 }
 
-func connectCloudShell(opts *ConnectOptions) error {
+func connectCloudShell() error {
 	fmt.Println("Authenticating...")
 	token, err := auth.GetToken()
 	if err != nil {
@@ -143,10 +101,7 @@ func connectCloudShell(opts *ConnectOptions) error {
 		return fmt.Errorf("failed to get user settings: %w", err)
 	}
 
-	location := opts.Location
-	if location == "" {
-		location = settings.PreferredLocation
-	}
+	location := settings.PreferredLocation
 
 	fmt.Print("Requesting a Cloud Shell. ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, defaultOSType, location)
@@ -162,7 +117,7 @@ func connectCloudShell(opts *ConnectOptions) error {
 	}
 
 	fmt.Println("Connecting terminal...")
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, opts.Shell, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, defaultShellType, width, height)
 	if err != nil {
 		return fmt.Errorf("failed to negotiate terminal: %w", err)
 	}
