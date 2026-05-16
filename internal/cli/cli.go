@@ -102,9 +102,17 @@ func connectCloudShell() error {
 	}
 
 	location := settings.PreferredLocation
+	osType := settings.PreferredOsType
+	if osType == "" {
+		osType = defaultOSType
+	}
+	shellType := settings.PreferredShellType
+	if shellType == "" {
+		shellType = defaultShellType
+	}
 
 	fmt.Print("Requesting a Cloud Shell. ")
-	consoleRes, err := cloudshell.ProvisionConsole(token, defaultOSType, location)
+	consoleRes, err := cloudshell.ProvisionConsole(token, osType, location)
 	if err != nil {
 		return fmt.Errorf("failed to provision console: %w", err)
 	}
@@ -117,7 +125,7 @@ func connectCloudShell() error {
 	}
 
 	fmt.Println("Connecting terminal...")
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, defaultShellType, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, shellType, width, height)
 	if err != nil {
 		return fmt.Errorf("failed to negotiate terminal: %w", err)
 	}
