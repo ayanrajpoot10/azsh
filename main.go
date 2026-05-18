@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ayanrajpoot10/azsh/internal/cli"
+	"github.com/ayanrajpoot10/azsh/cli"
 )
 
 func main() {
