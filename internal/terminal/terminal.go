@@ -42,6 +42,12 @@ func readFromWebSocket(ctx context.Context, conn *websocket.Conn, errCh chan err
 			}
 			return
 		}
+		
+		if len(message) == 0 {
+			errCh <- nil
+			return
+		}
+
 		_, _ = os.Stdout.Write(message)
 	}
 }
