@@ -4,6 +4,6 @@ import (
 	"github.com/ayanrajpoot10/azsh/internal/auth"
 )
 
-func handleLogout() error {
+func logout() error {
 	return auth.Logout()
 }

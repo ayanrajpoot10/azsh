@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func handleHelp() {
+func help() {
 	help := `Usage: azsh [command]
 
 Commands:

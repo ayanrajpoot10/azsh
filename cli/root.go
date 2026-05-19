@@ -13,9 +13,9 @@ func Run(args []string) error {
 
 	switch command {
 	case "logout":
-		return handleLogout()
+		return logout()
 	case "help", "-h", "--help":
-		handleHelp()
+		help()
 		return nil
 	default:
 		return fmt.Errorf("unknown command: %s\n\nUse 'azsh help' for usage information", command)
