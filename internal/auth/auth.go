@@ -20,7 +20,7 @@ func newClient(tenant string) (public.Client, error) {
 	return public.New(
 		clientID,
 		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
-		public.WithCache(fileCache{}),
+		public.WithCache(tokenCache{}),
 		public.WithHTTPClient(httpClient),
 	)
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 )
 
-type fileCache struct{}
+type tokenCache struct{}
 
 type tenantPayload struct {
 	TenantID string `json:"tenantId"`
@@ -73,7 +73,7 @@ func writeCachedTenant(tenant string) error {
 	return os.WriteFile(path, data, 0600)
 }
 
-func (fileCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.ReplaceHints) error {
+func (tokenCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.ReplaceHints) error {
 	path, err := getFilePath(tokenFile)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (fileCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.R
 	return c.Unmarshal(data)
 }
 
-func (fileCache) Export(ctx context.Context, c cache.Marshaler, hints cache.ExportHints) error {
+func (tokenCache) Export(ctx context.Context, c cache.Marshaler, hints cache.ExportHints) error {
 	data, err := c.Marshal()
 	if err != nil {
 		return err
