@@ -24,11 +24,11 @@ func runLogoutCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cacheDir := filepath.Join(home, ".azsh")
+	azshDir := filepath.Join(home, ".azsh")
 
 	removed := false
 	for _, name := range []string{"token.json", "tenant.json"} {
-		path := filepath.Join(cacheDir, name)
+		path := filepath.Join(azshDir, name)
 		if err := os.Remove(path); err != nil {
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("failed to remove %s: %w", name, err)
