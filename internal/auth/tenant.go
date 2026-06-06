@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
 type Tenant struct {
@@ -59,29 +61,13 @@ func SelectTenant(token string) (string, error) {
 		return tenants[0].ID, nil
 	}
 
-	return selectTenant(tenants)
-}
-
-func selectTenant(tenants []Tenant) (string, error) {
-	fmt.Println("\nMultiple tenants found. Please select one:")
-	fmt.Println()
-
-	for i, tenant := range tenants {
-		fmt.Printf("  [%d] %s\n", i+1, tenant.ID)
+	options := make([]string, len(tenants))
+	for i, t := range tenants {
+		options[i] = t.ID
 	}
-
-	fmt.Println()
-
-	var choice int
-	for {
-		fmt.Printf("Enter your choice (1-%d): ", len(tenants))
-		_, err := fmt.Scanln(&choice)
-		if err != nil || choice < 1 || choice > len(tenants) {
-			fmt.Printf("Invalid choice. Please enter a number between 1 and %d.\n", len(tenants))
-			continue
-		}
-		break
+	idx, err := utils.PromptSelect("\nMultiple tenants found. Please select one:", options)
+	if err != nil {
+		return "", err
 	}
-
-	return tenants[choice-1].ID, nil
+	return tenants[idx].ID, nil
 }

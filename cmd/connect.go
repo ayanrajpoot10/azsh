@@ -1,9 +1,10 @@
-package cli
+package cmd
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
 	"github.com/ayanrajpoot10/azsh/internal/auth"
@@ -18,19 +19,43 @@ const (
 	defaultHeight    = 30
 )
 
-func connect() error {
-	fmt.Println("Authenticating...")
-	token, err := auth.Token()
+var connectCmd = &cobra.Command{
+	Use:   "connect",
+	Short: "Connect to Azure Cloud Shell",
+	RunE:  runConnectCmd,
+}
+
+func init() {
+	rootCmd.AddCommand(connectCmd)
+}
+
+func runConnectCmd(cmd *cobra.Command, args []string) error {
+	token, err := auth.Authenticate()
 	if err != nil {
 		return fmt.Errorf("failed to get auth token: %w", err)
 	}
 
+	settings, err := getUserSettings(token)
+	if err != nil {
+		return err
+	}
+
+	return startSession(token, settings)
+}
+
+func getUserSettings(token string) (*cloudshell.Properties, error) {
 	fmt.Println("Fetching user settings...")
 	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
-		return fmt.Errorf("failed to get user settings: %w", err)
+		if cloudshell.IsUserSettingsNotFound(err) {
+			return nil, fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
+		}
+		return nil, fmt.Errorf("failed to get user settings: %w", err)
 	}
+	return settings, nil
+}
 
+func startSession(token string, settings *cloudshell.Properties) error {
 	location := settings.PreferredLocation
 	osType := settings.PreferredOsType
 	if osType == "" {

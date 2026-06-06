@@ -97,7 +97,7 @@ func refreshTokenWithTenant(tenant string) (string, error) {
 	return token, nil
 }
 
-func Token() (string, error) {
+func Authenticate() (string, error) {
 	tenant, _ := readCachedTenant()
 
 	if tenant != "" {

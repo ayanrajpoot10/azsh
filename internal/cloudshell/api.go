@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 const (
-	userSettingsURL = "https://management.azure.com/providers/Microsoft.Portal/userSettings/cloudconsole?api-version=2023-02-01-preview"
-	consoleURL      = "https://management.azure.com/providers/Microsoft.Portal/consoles/default?api-version=2023-02-01-preview"
-	consoleOrigin   = "https://ux.console.azure.com"
-	userAgent       = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+	userSettingsURL     = "https://management.azure.com/providers/Microsoft.Portal/userSettings/cloudconsole?api-version=2023-02-01-preview"
+	consoleURL          = "https://management.azure.com/providers/Microsoft.Portal/consoles/default?api-version=2023-02-01-preview"
+	subscriptionsURL    = "https://management.azure.com/subscriptions?api-version=2018-07-01"
+	resourceGroupsURL   = "https://management.azure.com/subscriptions/%s/resourceGroups?api-version=2017-05-10"
+	consoleOrigin       = "https://ux.console.azure.com"
+	userAgent           = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
 
 	terminalVersion = "2019-01-01"
 )
@@ -46,6 +49,37 @@ type TerminalResponse struct {
 	SocketURI    string `json:"socketUri"`
 	IdleTimeout  string `json:"idleTimeout"`
 	TokenUpdated bool   `json:"tokenUpdated"`
+}
+
+type Subscription struct {
+	SubscriptionID string `json:"subscriptionId"`
+	DisplayName    string `json:"displayName"`
+}
+
+type ResourceGroup struct {
+	Name     string `json:"name"`
+	Location string `json:"location"`
+}
+
+type registrationPayload struct {
+	Properties registrationProperties `json:"properties"`
+}
+
+type registrationProperties struct {
+	PreferredOsType    string           `json:"preferredOsType"`
+	PreferredLocation  string           `json:"preferredLocation"`
+	StorageProfile     *string          `json:"storageProfile"`
+	TerminalSettings   termSettings     `json:"terminalSettings"`
+	VnetSettings       *string          `json:"vnetSettings"`
+	UserSubscription   string           `json:"userSubscription"`
+	SessionType        string           `json:"sessionType"`
+	NetworkType        string           `json:"networkType"`
+	PreferredShellType string           `json:"preferredShellType"`
+}
+
+type termSettings struct {
+	FontSize  string `json:"fontSize"`
+	FontStyle string `json:"fontStyle"`
 }
 
 func setCommonHeaders(req *http.Request, token string) {
@@ -112,6 +146,108 @@ func GetUserSettings(token string) (*Properties, error) {
 	}
 
 	return &settings.Properties, nil
+}
+
+func IsUserSettingsNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UserSettingsNotFound")
+}
+
+func ListSubscriptions(token string) ([]Subscription, error) {
+	req, err := http.NewRequest(http.MethodGet, subscriptionsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	setCommonHeaders(req, token)
+
+	resp, data, err := executeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkStatus(resp.StatusCode); err != nil {
+		return nil, fmt.Errorf("list subscriptions failed: %s, response: %s", resp.Status, string(data))
+	}
+
+	var result struct {
+		Value []Subscription `json:"value"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
+
+	return result.Value, nil
+}
+
+func ListResourceGroups(token, subscriptionID string) ([]ResourceGroup, error) {
+	url := fmt.Sprintf(resourceGroupsURL, subscriptionID)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	setCommonHeaders(req, token)
+
+	resp, data, err := executeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkStatus(resp.StatusCode); err != nil {
+		return nil, fmt.Errorf("list resource groups failed: %s, response: %s", resp.Status, string(data))
+	}
+
+	var result struct {
+		Value []ResourceGroup `json:"value"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
+
+	return result.Value, nil
+}
+
+func RegisterUserSettings(token, subscriptionID, location string) error {
+	payload := registrationPayload{
+		Properties: registrationProperties{
+			PreferredOsType:    "linux",
+			PreferredLocation:  location,
+			StorageProfile:     nil,
+			TerminalSettings: termSettings{
+				FontSize:  "medium",
+				FontStyle: "monospace",
+			},
+			VnetSettings:       nil,
+			UserSubscription:   subscriptionID,
+			SessionType:        "Ephemeral",
+			NetworkType:        "Default",
+			PreferredShellType: "bash",
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, userSettingsURL, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+
+	setCommonHeaders(req, token)
+	setContentTypeJSON(req)
+
+	resp, data, err := executeRequest(req)
+	if err != nil {
+		return err
+	}
+
+	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
+		return fmt.Errorf("user settings registration failed: %s, response: %s", resp.Status, string(data))
+	}
+
+	return nil
 }
 
 func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse, error) {
