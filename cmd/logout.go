@@ -27,7 +27,7 @@ func runLogoutCmd(cmd *cobra.Command, args []string) error {
 	azshDir := filepath.Join(home, ".azsh")
 
 	removed := false
-	for _, name := range []string{"token.json", "tenant.json"} {
+	for _, name := range []string{"token.json"} {
 		path := filepath.Join(azshDir, name)
 		if err := os.Remove(path); err != nil {
 			if !os.IsNotExist(err) {

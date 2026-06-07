@@ -16,17 +16,13 @@ const (
 
 var defaultScopes = []string{defaultScope}
 
-func newClient(tenant string) (public.Client, error) {
-	return public.New(
+func trySilentAuth() (string, error) {
+	ctx := context.Background()
+	client, err := public.New(
 		clientID,
-		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
 		public.WithCache(tokenCache{}),
 		public.WithHTTPClient(httpClient),
 	)
-}
-
-func acquireToken(ctx context.Context, tenant string) (string, error) {
-	client, err := newClient(tenant)
 	if err != nil {
 		return "", err
 	}
@@ -37,17 +33,13 @@ func acquireToken(ctx context.Context, tenant string) (string, error) {
 	}
 
 	for _, account := range accounts {
-		opts := []public.AcquireSilentOption{
+		result, err := client.AcquireTokenSilent(ctx, defaultScopes,
 			public.WithSilentAccount(account),
-			public.WithTenantID(tenant),
+			public.WithTenantID(account.Realm),
+		)
+		if err == nil {
+			return result.AccessToken, nil
 		}
-
-		result, err := client.AcquireTokenSilent(ctx, defaultScopes, opts...)
-		if err != nil {
-			continue
-		}
-
-		return result.AccessToken, nil
 	}
 
 	return "", fmt.Errorf("no cached token found")
@@ -56,12 +48,12 @@ func acquireToken(ctx context.Context, tenant string) (string, error) {
 func deviceCodeLogin() (string, error) {
 	ctx := context.Background()
 
-	token, err := acquireToken(ctx, defaultTenantID)
-	if err == nil {
-		return token, nil
-	}
-
-	client, err := newClient(defaultTenantID)
+	client, err := public.New(
+		clientID,
+		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, defaultTenantID)),
+		public.WithCache(tokenCache{}),
+		public.WithHTTPClient(httpClient),
+	)
 	if err != nil {
 		return "", err
 	}
@@ -88,25 +80,44 @@ func deviceCodeLogin() (string, error) {
 	return result.AccessToken, nil
 }
 
-func refreshTokenWithTenant(tenant string) (string, error) {
+func refreshForTenant(tenant string) (string, error) {
 	ctx := context.Background()
-	token, err := acquireToken(ctx, tenant)
+
+	client, err := public.New(
+		clientID,
+		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
+		public.WithCache(tokenCache{}),
+		public.WithHTTPClient(httpClient),
+	)
 	if err != nil {
-		return "", fmt.Errorf("failed to acquire token for tenant %s: %w", tenant, err)
+		return "", err
 	}
-	return token, nil
-}
 
-func Authenticate() (string, error) {
-	tenant, _ := readCachedTenant()
+	accounts, err := client.Accounts(ctx)
+	if err != nil {
+		return "", err
+	}
 
-	if tenant != "" {
-		if token, err := refreshTokenWithTenant(tenant); err == nil {
-			return token, nil
+	for _, account := range accounts {
+		result, err := client.AcquireTokenSilent(ctx, defaultScopes,
+			public.WithSilentAccount(account),
+			public.WithTenantID(tenant),
+		)
+		if err == nil {
+			return result.AccessToken, nil
 		}
 	}
 
-	token, err := deviceCodeLogin()
+	return "", fmt.Errorf("failed to acquire token for tenant %s", tenant)
+}
+
+func Authenticate() (string, error) {
+	token, err := trySilentAuth()
+	if err == nil {
+		return token, nil
+	}
+
+	token, err = deviceCodeLogin()
 	if err != nil {
 		return "", err
 	}
@@ -116,14 +127,42 @@ func Authenticate() (string, error) {
 		return "", err
 	}
 
-	if err := writeCachedTenant(newTenant); err != nil {
-		return "", err
-	}
-
-	token, err = refreshTokenWithTenant(newTenant)
+	token, err = refreshForTenant(newTenant)
 	if err != nil {
 		return "", err
 	}
 
+	if err := cleanupDefaultAccount(newTenant); err != nil {
+		return "", err
+	}
+
 	return token, nil
+}
+
+func cleanupDefaultAccount(selectedTenant string) error {
+	ctx := context.Background()
+
+	client, err := public.New(
+		clientID,
+		public.WithCache(tokenCache{}),
+		public.WithHTTPClient(httpClient),
+	)
+	if err != nil {
+		return err
+	}
+
+	accounts, err := client.Accounts(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, acc := range accounts {
+		if acc.Realm != selectedTenant {
+			if err := client.RemoveAccount(ctx, acc); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
