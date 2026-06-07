@@ -12,13 +12,6 @@ import (
 	"github.com/ayanrajpoot10/azsh/internal/terminal"
 )
 
-const (
-	defaultShellType = "bash"
-	defaultOSType    = "Linux"
-	defaultWidth     = 120
-	defaultHeight    = 30
-)
-
 var connectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect to Azure Cloud Shell",
@@ -58,13 +51,7 @@ func getUserSettings(token string) (*cloudshell.Properties, error) {
 func openSession(token string, settings *cloudshell.Properties) error {
 	location := settings.PreferredLocation
 	osType := settings.PreferredOsType
-	if osType == "" {
-		osType = defaultOSType
-	}
 	shellType := settings.PreferredShellType
-	if shellType == "" {
-		shellType = defaultShellType
-	}
 
 	fmt.Print("Requesting a Cloud Shell. ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, osType, location)
@@ -75,8 +62,8 @@ func openSession(token string, settings *cloudshell.Properties) error {
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		width = defaultWidth
-		height = defaultHeight
+		width = 120
+		height = 30
 	}
 
 	fmt.Println("Connecting terminal...")
