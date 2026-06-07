@@ -40,7 +40,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return startSession(token, settings)
+	return openSession(token, settings)
 }
 
 func getUserSettings(token string) (*cloudshell.Properties, error) {
@@ -55,7 +55,7 @@ func getUserSettings(token string) (*cloudshell.Properties, error) {
 	return settings, nil
 }
 
-func startSession(token string, settings *cloudshell.Properties) error {
+func openSession(token string, settings *cloudshell.Properties) error {
 	location := settings.PreferredLocation
 	osType := settings.PreferredOsType
 	if osType == "" {
