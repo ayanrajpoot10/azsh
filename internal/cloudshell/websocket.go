@@ -13,7 +13,7 @@ const (
 func BuildWebSocketURL(consoleURI string, terminalID string) (string, error) {
 	u, err := url.Parse(consoleURI)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse uri: %w", err)
 	}
 
 	u.Scheme = wsScheme

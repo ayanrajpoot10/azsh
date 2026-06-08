@@ -25,10 +25,10 @@ func init() {
 func runConnectCmd(cmd *cobra.Command, args []string) error {
 	token, err := auth.Authenticate()
 	if err != nil {
-		return fmt.Errorf("failed to get auth token: %w", err)
+		return fmt.Errorf("auth failed: %w", err)
 	}
 
-	settings, err := getUserSettings(token)
+	settings, err := fetchUserSettings(token)
 	if err != nil {
 		return err
 	}
@@ -36,14 +36,14 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 	return openSession(token, settings)
 }
 
-func getUserSettings(token string) (*cloudshell.Properties, error) {
+func fetchUserSettings(token string) (*cloudshell.Properties, error) {
 	fmt.Println("Fetching user settings...")
 	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
 		if cloudshell.IsUserSettingsNotFound(err) {
 			return nil, fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
 		}
-		return nil, fmt.Errorf("failed to get user settings: %w", err)
+		return nil, fmt.Errorf("user settings: %w", err)
 	}
 	return settings, nil
 }
@@ -53,7 +53,7 @@ func openSession(token string, settings *cloudshell.Properties) error {
 	osType := settings.PreferredOsType
 	shellType := settings.PreferredShellType
 
-	fmt.Print("Requesting a Cloud Shell. ")
+	fmt.Print("Requesting a Cloud Shell... ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, osType, location)
 	if err != nil {
 		return fmt.Errorf("failed to provision console: %w", err)

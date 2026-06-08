@@ -23,16 +23,16 @@ func init() {
 func runRegisterCmd(cmd *cobra.Command, args []string) error {
 	token, err := auth.Authenticate()
 	if err != nil {
-		return fmt.Errorf("failed to get auth token: %w", err)
+		return fmt.Errorf("auth failed: %w", err)
 	}
 
 	fmt.Println("Fetching subscriptions...")
 	subscriptions, err := cloudshell.ListSubscriptions(token)
 	if err != nil {
-		return fmt.Errorf("failed to list subscriptions: %w", err)
+		return fmt.Errorf("list subscriptions: %w", err)
 	}
 	if len(subscriptions) == 0 {
-		return fmt.Errorf("no Azure subscriptions found")
+		return fmt.Errorf("no subscriptions found")
 	}
 
 	subNames := make([]string, len(subscriptions))
@@ -43,32 +43,29 @@ func runRegisterCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	sub := subscriptions[subIdx]
 
 	fmt.Println("Fetching resource groups...")
-	resourceGroups, err := cloudshell.ListResourceGroups(token, sub.SubscriptionID)
+	rgs, err := cloudshell.ListResourceGroups(token, subscriptions[subIdx].SubscriptionID)
 	if err != nil {
-		return fmt.Errorf("failed to list resource groups: %w", err)
+		return err
 	}
-	if len(resourceGroups) == 0 {
-		return fmt.Errorf("no resource groups found in '%s'. Create one in the Azure portal first", sub.DisplayName)
+	if len(rgs) == 0 {
+		return fmt.Errorf("no resource groups in subscription")
 	}
 
-	rgNames := make([]string, len(resourceGroups))
-	for i, rg := range resourceGroups {
+	rgNames := make([]string, len(rgs))
+	for i, rg := range rgs {
 		rgNames[i] = fmt.Sprintf("%s (%s)", rg.Name, rg.Location)
 	}
 	rgIdx, err := utils.PromptSelect("Select a resource group:", rgNames)
 	if err != nil {
 		return err
 	}
-	rg := resourceGroups[rgIdx]
 
 	fmt.Println("Registering Cloud Shell...")
-	if err := cloudshell.RegisterUserSettings(token, sub.SubscriptionID, rg.Location); err != nil {
-		return fmt.Errorf("failed to register Cloud Shell: %w", err)
+	if err := cloudshell.RegisterUserSettings(token, subscriptions[subIdx].SubscriptionID, rgs[rgIdx].Location); err != nil {
+		return fmt.Errorf("register: %w", err)
 	}
-	fmt.Println("Cloud Shell registered successfully.")
-
+	fmt.Println("Cloud Shell registered.")
 	return nil
 }

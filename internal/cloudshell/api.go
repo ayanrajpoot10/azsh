@@ -97,13 +97,13 @@ func setContentTypeJSON(req *http.Request) {
 func executeRequest(req *http.Request) (*http.Response, []byte, error) {
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("http do: %w", err)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("read body: %w", err)
 	}
 
 	return resp, data, nil
@@ -137,7 +137,7 @@ func GetUserSettings(token string) (*Properties, error) {
 	}
 
 	if err := checkStatus(resp.StatusCode); err != nil {
-		return nil, fmt.Errorf("user settings request failed with status: %s, response: %s", resp.Status, string(data))
+		return nil, fmt.Errorf("user settings: %s, response: %s", resp.Status, string(data))
 	}
 
 	settings := &Settings{}
@@ -166,7 +166,7 @@ func ListSubscriptions(token string) ([]Subscription, error) {
 	}
 
 	if err := checkStatus(resp.StatusCode); err != nil {
-		return nil, fmt.Errorf("list subscriptions failed: %s, response: %s", resp.Status, string(data))
+		return nil, fmt.Errorf("list subscriptions: %s, response: %s", resp.Status, string(data))
 	}
 
 	var result struct {
@@ -194,7 +194,7 @@ func ListResourceGroups(token, subscriptionID string) ([]ResourceGroup, error) {
 	}
 
 	if err := checkStatus(resp.StatusCode); err != nil {
-		return nil, fmt.Errorf("list resource groups failed: %s, response: %s", resp.Status, string(data))
+		return nil, fmt.Errorf("list resource groups: %s, response: %s", resp.Status, string(data))
 	}
 
 	var result struct {
@@ -269,7 +269,7 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 	}
 
 	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
-		return nil, fmt.Errorf("console provisioning failed: %s, response: %s", resp.Status, string(data))
+		return nil, fmt.Errorf("console provisioning: %s, response: %s", resp.Status, string(data))
 	}
 
 	var consoleResp ConsoleResponse
@@ -296,7 +296,7 @@ func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*Termin
 	}
 
 	if err := checkStatus(authResp.StatusCode); err != nil {
-		return nil, fmt.Errorf("authorization to container failed: %s - %s", authResp.Status, string(authData))
+		return nil, fmt.Errorf("authorize container: %s - %s", authResp.Status, string(authData))
 	}
 
 	termURI := fmt.Sprintf("%s/terminals?cols=%d&rows=%d&version=%s&shell=%s", consoleURI, cols, rows, terminalVersion, shell)
@@ -314,7 +314,7 @@ func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*Termin
 	}
 
 	if err := checkStatus(resp.StatusCode); err != nil {
-		return nil, fmt.Errorf("terminal negotiation failed: %s, response: %s", resp.Status, string(data))
+		return nil, fmt.Errorf("negotiate terminal: %s, response: %s", resp.Status, string(data))
 	}
 
 	var terminal TerminalResponse
@@ -341,7 +341,7 @@ func ResizeTerminal(token, consoleURI, terminalID string, cols, rows int) error 
 	}
 
 	if err := checkStatus(resp.StatusCode); err != nil {
-		return fmt.Errorf("terminal resize failed: %s, response: %s", resp.Status, string(data))
+		return fmt.Errorf("resize terminal: %s, response: %s", resp.Status, string(data))
 	}
 
 	return nil

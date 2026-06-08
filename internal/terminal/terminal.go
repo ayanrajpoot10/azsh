@@ -20,7 +20,7 @@ func isNormalClose(status websocket.StatusCode) bool {
 func setupTerminal() (func() error, error) {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("raw terminal: %w", err)
 	}
 
 	restore := func() error {
@@ -38,7 +38,7 @@ func readFromWebSocket(ctx context.Context, conn *websocket.Conn, errCh chan err
 			if isNormalClose(status) {
 				errCh <- nil
 			} else {
-				errCh <- fmt.Errorf("read error: %v", err)
+				errCh <- fmt.Errorf("read error: %w", err)
 			}
 			return
 		}
@@ -57,13 +57,13 @@ func writeToWebSocket(ctx context.Context, conn *websocket.Conn, errCh chan erro
 	for {
 		n, err := os.Stdin.Read(buf)
 		if err != nil {
-			errCh <- err
+			errCh <- fmt.Errorf("stdin read: %w", err)
 			return
 		}
 
 		err = conn.Write(ctx, websocket.MessageText, buf[:n])
 		if err != nil {
-			errCh <- err
+			errCh <- fmt.Errorf("ws write: %w", err)
 			return
 		}
 	}
@@ -74,9 +74,9 @@ func Connect(wsURI string) error {
 	conn, resp, err := websocket.Dial(ctx, wsURI, nil)
 	if err != nil {
 		if resp != nil {
-			return fmt.Errorf("websocket dial failed: %v (HTTP %d)", err, resp.StatusCode)
+			return fmt.Errorf("websocket dial: %w (HTTP %d)", err, resp.StatusCode)
 		}
-		return fmt.Errorf("websocket dial failed: %v", err)
+		return fmt.Errorf("websocket dial: %w", err)
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 

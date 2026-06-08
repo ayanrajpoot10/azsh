@@ -2,9 +2,13 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+
+	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
 const (
@@ -14,9 +18,41 @@ const (
 	defaultScope    = "https://management.core.windows.net//.default"
 )
 
-var defaultScopes = []string{defaultScope}
+var httpClient = &http.Client{}
 
-func trySilentAuth() (string, error) {
+type tenant struct {
+	ID string `json:"tenantId"`
+}
+
+type tenantsResponse struct {
+	Value []tenant `json:"value"`
+}
+
+func Authenticate() (string, error) {
+	token, err := silentAuth()
+	if err == nil {
+		return token, nil
+	}
+
+	token, err = interactiveLogin()
+	if err != nil {
+		return "", fmt.Errorf("interactive login: %w", err)
+	}
+
+	tenant, err := selectTenant(token)
+	if err != nil {
+		return "", fmt.Errorf("tenant selection: %w", err)
+	}
+
+	token, err = tokenForTenant(tenant)
+	if err != nil {
+		return "", fmt.Errorf("tenant token: %w", err)
+	}
+
+	return token, nil
+}
+
+func silentAuth() (string, error) {
 	ctx := context.Background()
 	client, err := public.New(
 		clientID,
@@ -33,7 +69,10 @@ func trySilentAuth() (string, error) {
 	}
 
 	for _, account := range accounts {
-		result, err := client.AcquireTokenSilent(ctx, defaultScopes,
+		if account.Realm == defaultTenantID {
+			continue
+		}
+		result, err := client.AcquireTokenSilent(ctx, []string{defaultScope},
 			public.WithSilentAccount(account),
 			public.WithTenantID(account.Realm),
 		)
@@ -42,10 +81,10 @@ func trySilentAuth() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no cached token found")
+	return "", fmt.Errorf("no cached token")
 }
 
-func deviceCodeLogin() (string, error) {
+func interactiveLogin() (string, error) {
 	ctx := context.Background()
 
 	client, err := public.New(
@@ -58,7 +97,7 @@ func deviceCodeLogin() (string, error) {
 		return "", err
 	}
 
-	dc, err := client.AcquireTokenByDeviceCode(ctx, defaultScopes, public.WithTenantID(defaultTenantID))
+	dc, err := client.AcquireTokenByDeviceCode(ctx, []string{defaultScope}, public.WithTenantID(defaultTenantID))
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +119,7 @@ func deviceCodeLogin() (string, error) {
 	return result.AccessToken, nil
 }
 
-func refreshForTenant(tenant string) (string, error) {
+func tokenForTenant(tenant string) (string, error) {
 	ctx := context.Background()
 
 	client, err := public.New(
@@ -99,7 +138,7 @@ func refreshForTenant(tenant string) (string, error) {
 	}
 
 	for _, account := range accounts {
-		result, err := client.AcquireTokenSilent(ctx, defaultScopes,
+		result, err := client.AcquireTokenSilent(ctx, []string{defaultScope},
 			public.WithSilentAccount(account),
 			public.WithTenantID(tenant),
 		)
@@ -108,61 +147,55 @@ func refreshForTenant(tenant string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("failed to acquire token for tenant %s", tenant)
+	return "", fmt.Errorf("token for tenant %s", tenant)
 }
 
-func Authenticate() (string, error) {
-	token, err := trySilentAuth()
-	if err == nil {
-		return token, nil
-	}
-
-	token, err = deviceCodeLogin()
+func selectTenant(token string) (string, error) {
+	tenants, err := getTenants(token)
 	if err != nil {
 		return "", err
 	}
 
-	newTenant, err := SelectTenant(token)
+	if len(tenants) == 1 {
+		return tenants[0].ID, nil
+	}
+
+	options := make([]string, len(tenants))
+	for i, t := range tenants {
+		options[i] = t.ID
+	}
+	idx, err := utils.PromptSelect("\nMultiple tenants found. Please select one:", options)
 	if err != nil {
 		return "", err
 	}
-
-	token, err = refreshForTenant(newTenant)
-	if err != nil {
-		return "", err
-	}
-
-	if err := cleanupDefaultAccount(newTenant); err != nil {
-		return "", err
-	}
-
-	return token, nil
+	return tenants[idx].ID, nil
 }
 
-func cleanupDefaultAccount(selectedTenant string) error {
-	ctx := context.Background()
-
-	client, err := public.New(
-		clientID,
-		public.WithCache(tokenCache{}),
-		public.WithHTTPClient(httpClient),
-	)
+func getTenants(token string) ([]tenant, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://management.azure.com/tenants?api-version=2020-01-01", nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	req.Header.Set("Authorization", "Bearer "+token)
 
-	accounts, err := client.Accounts(ctx)
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("tenants: %s", resp.Status)
 	}
 
-	for _, acc := range accounts {
-		if acc.Realm != selectedTenant {
-			if err := client.RemoveAccount(ctx, acc); err != nil {
-				return err
-			}
-		}
+	var tr tenantsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return nil, err
 	}
 
-	return nil
+	if len(tr.Value) == 0 {
+		return nil, fmt.Errorf("no tenants found")
+	}
+
+	return tr.Value, nil
 }

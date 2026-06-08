@@ -10,17 +10,12 @@ import (
 
 type tokenCache struct{}
 
-const (
-	configDir = ".azsh"
-	tokenFile = "token.json"
-)
-
-func getFilePath(filename string) (string, error) {
+func cachePath(filename string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	dir := filepath.Join(home, configDir)
+	dir := filepath.Join(home, ".azsh")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
@@ -28,7 +23,7 @@ func getFilePath(filename string) (string, error) {
 }
 
 func (tokenCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.ReplaceHints) error {
-	path, err := getFilePath(tokenFile)
+	path, err := cachePath("token.json")
 	if err != nil {
 		return err
 	}
@@ -50,7 +45,7 @@ func (tokenCache) Export(ctx context.Context, c cache.Marshaler, hints cache.Exp
 		return err
 	}
 
-	path, err := getFilePath(tokenFile)
+	path, err := cachePath("token.json")
 	if err != nil {
 		return err
 	}

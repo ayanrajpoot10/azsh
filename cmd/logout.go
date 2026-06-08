@@ -24,22 +24,12 @@ func runLogoutCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	azshDir := filepath.Join(home, ".azsh")
-
-	removed := false
-	for _, name := range []string{"token.json"} {
-		path := filepath.Join(azshDir, name)
-		if err := os.Remove(path); err != nil {
-			if !os.IsNotExist(err) {
-				return fmt.Errorf("failed to remove %s: %w", name, err)
-			}
-			continue
+	path := filepath.Join(home, ".azsh", "token.json")
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("not logged in")
 		}
-		removed = true
-	}
-
-	if !removed {
-		return fmt.Errorf("not logged in: no cached credentials found")
+		return fmt.Errorf("remove token.json: %w", err)
 	}
 
 	fmt.Println("Logged out successfully.")
