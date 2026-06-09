@@ -15,3 +15,8 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
+
+func init() {
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+}
