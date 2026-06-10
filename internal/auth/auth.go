@@ -1,12 +1,16 @@
 package auth
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+	"github.com/atotto/clipboard"
+	"github.com/pkg/browser"
 
 	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
@@ -102,7 +106,27 @@ func interactiveLogin() (string, error) {
 		return "", err
 	}
 
-	fmt.Println(dc.Result.Message)
+	fmt.Println()
+	fmt.Println("To sign in, open:")
+	fmt.Printf("  %s\n", dc.Result.VerificationURL)
+	fmt.Println()
+	fmt.Println("And enter the code:")
+	fmt.Printf("  %s\n", dc.Result.UserCode)
+	fmt.Println()
+
+	fmt.Print("Press Enter to copy code and open browser...")
+	bufio.NewScanner(os.Stdin).Scan()
+
+	if err := clipboard.WriteAll(dc.Result.UserCode); err != nil {
+		fmt.Println()
+		fmt.Printf("Warning: failed to copy code to clipboard: %v\n", err)
+	}
+	if err := browser.OpenURL(dc.Result.VerificationURL); err != nil {
+		fmt.Printf("Warning: failed to open browser: %v\n", err)
+	}
+	fmt.Println()
+	fmt.Println("✓ Device code copied! Opening browser...")
+	fmt.Println()
 
 	deviceCtx := ctx
 	if !dc.Result.ExpiresOn.IsZero() {
@@ -115,6 +139,9 @@ func interactiveLogin() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Println("✓ Login successful!")
+	fmt.Println()
 
 	return result.AccessToken, nil
 }
