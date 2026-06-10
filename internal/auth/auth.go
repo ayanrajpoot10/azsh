@@ -62,6 +62,7 @@ func silentAuth() (string, error) {
 		clientID,
 		public.WithCache(tokenCache{}),
 		public.WithHTTPClient(httpClient),
+		public.WithInstanceDiscovery(false),
 	)
 	if err != nil {
 		return "", err
@@ -154,6 +155,7 @@ func tokenForTenant(tenant string) (string, error) {
 		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
 		public.WithCache(tokenCache{}),
 		public.WithHTTPClient(httpClient),
+		public.WithInstanceDiscovery(false),
 	)
 	if err != nil {
 		return "", err
