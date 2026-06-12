@@ -13,7 +13,7 @@ import (
 
 var resetCmd = &cobra.Command{
 	Use:   "reset",
-	Short: "Reset Cloud Shell provisioning and settings",
+	Short: "Reset Cloud Shell console and settings",
 	RunE:  runResetCmd,
 }
 

@@ -10,7 +10,7 @@ import (
 
 var logoutCmd = &cobra.Command{
 	Use:   "logout",
-	Short: "Clear cached credentials",
+	Short: "Sign out of Azure",
 	RunE:  runLogoutCmd,
 }
 

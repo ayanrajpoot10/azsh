@@ -14,7 +14,7 @@ const diskSizeGB = 5
 
 var registerCmd = &cobra.Command{
 	Use:   "register",
-	Short: "Register Cloud Shell for your Azure account",
+	Short: "Set up Cloud Shell for your Azure account",
 	RunE:  runRegisterCmd,
 }
 

@@ -13,7 +13,7 @@ import (
 
 var execCmd = &cobra.Command{
 	Use:   "exec <command>",
-	Short: "Run a command on Cloud Shell and print its output",
+	Short: "Run a command in Cloud Shell",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  runExecCmd,
 }

@@ -10,7 +10,7 @@ import (
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Authenticate with Azure",
+	Short: "Sign in to Azure",
 	RunE:  runLoginCmd,
 }
 

@@ -12,6 +12,8 @@ import (
 	"github.com/ayanrajpoot10/azsh/internal/terminal"
 )
 
+var shellConnect string
+
 var connectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect to Azure Cloud Shell",
@@ -20,6 +22,7 @@ var connectCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(connectCmd)
+	connectCmd.Flags().StringVar(&shellConnect, "shell", "bash", "Shell type (bash or pwsh)")
 }
 
 func runConnectCmd(cmd *cobra.Command, args []string) error {
@@ -46,7 +49,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		width, height = 120, 30
 	}
 
-	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, shellConnect, width, height)
 	if err != nil {
 		return fmt.Errorf("negotiate terminal: %w", err)
 	}
