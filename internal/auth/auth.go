@@ -97,6 +97,7 @@ func interactiveLogin() (string, error) {
 		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, defaultTenantID)),
 		public.WithCache(tokenCache{}),
 		public.WithHTTPClient(httpClient),
+		public.WithInstanceDiscovery(false),
 	)
 	if err != nil {
 		return "", err
