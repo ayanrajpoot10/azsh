@@ -59,6 +59,5 @@ func runExecCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	command := strings.Join(args, " ")
-	err = terminal.ExecCommand(wsURL, command)
-	return err
+	return terminal.ExecCommand(wsURL, command)
 }
