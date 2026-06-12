@@ -25,9 +25,8 @@ func init() {
 func runConnectCmd(cmd *cobra.Command, args []string) error {
 	t, err := auth.Authenticate()
 	if err != nil {
-		return fmt.Errorf("auth failed: %w", err)
+		return fmt.Errorf("authenticate: %w", err)
 	}
-
 
 	settings, err := cloudshell.GetUserSettings(t)
 	if err != nil {
@@ -39,7 +38,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 
 	consoleRes, err := cloudshell.ProvisionConsole(t, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
-		return fmt.Errorf("failed to provision console: %w", err)
+		return fmt.Errorf("provision console: %w", err)
 	}
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
@@ -50,12 +49,12 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 
 	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
 	if err != nil {
-		return fmt.Errorf("failed to negotiate terminal: %w", err)
+		return fmt.Errorf("negotiate terminal: %w", err)
 	}
 
 	wsURL, err := cloudshell.BuildWebSocketURL(consoleRes.Properties.URI, terminalInfo.ID)
 	if err != nil {
-		return fmt.Errorf("failed to build websocket URL: %w", err)
+		return fmt.Errorf("build websocket URL: %w", err)
 	}
 
 	terminal.HandleResize(func(w, h int) {
@@ -63,7 +62,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 	})
 
 	if err := terminal.Connect(wsURL); err != nil {
-		return fmt.Errorf("websocket connection error: %w", err)
+		return fmt.Errorf("websocket: %w", err)
 	}
 	return nil
 }

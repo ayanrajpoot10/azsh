@@ -25,7 +25,7 @@ func init() {
 func runRegisterCmd(cmd *cobra.Command, args []string) error {
 	token, err := auth.Authenticate()
 	if err != nil {
-		return fmt.Errorf("auth failed: %w", err)
+		return fmt.Errorf("authenticate: %w", err)
 	}
 
 	fmt.Println("Fetching subscriptions...")

@@ -20,7 +20,7 @@ func init() {
 
 func runLoginCmd(cmd *cobra.Command, args []string) error {
 	if _, err := auth.Authenticate(); err != nil {
-		return fmt.Errorf("auth failed: %w", err)
+		return fmt.Errorf("authenticate: %w", err)
 	}
 	fmt.Println("Login successful.")
 	return nil

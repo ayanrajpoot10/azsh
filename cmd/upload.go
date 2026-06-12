@@ -25,7 +25,7 @@ func init() {
 func runUploadCmd(cmd *cobra.Command, args []string) error {
 	t, err := auth.Authenticate()
 	if err != nil {
-		return fmt.Errorf("auth failed: %w", err)
+		return fmt.Errorf("authenticate: %w", err)
 	}
 
 	settings, err := cloudshell.GetUserSettings(t)
