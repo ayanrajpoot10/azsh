@@ -25,12 +25,12 @@ func init() {
 }
 
 func runExecCmd(cmd *cobra.Command, args []string) error {
-	token, err := auth.Authenticate()
+	t, err := auth.Authenticate()
 	if err != nil {
 		return fmt.Errorf("auth failed: %w", err)
 	}
 
-	settings, err := cloudshell.GetUserSettings(token)
+	settings, err := cloudshell.GetUserSettings(t)
 	if err != nil {
 		if cloudshell.IsUserSettingsNotFound(err) {
 			return fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
@@ -38,7 +38,7 @@ func runExecCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("user settings: %w", err)
 	}
 
-	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
+	consoleRes, err := cloudshell.ProvisionConsole(t, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		return fmt.Errorf("provision console: %w", err)
 	}
@@ -48,7 +48,7 @@ func runExecCmd(cmd *cobra.Command, args []string) error {
 		width, height = 120, 30
 	}
 
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
 	if err != nil {
 		return fmt.Errorf("negotiate terminal: %w", err)
 	}
@@ -59,5 +59,6 @@ func runExecCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	command := strings.Join(args, " ")
-	return terminal.ExecCommand(wsURL, command)
+	err = terminal.ExecCommand(wsURL, command)
+	return err
 }

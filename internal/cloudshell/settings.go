@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -19,7 +21,51 @@ type Properties struct {
 	SessionType        string `json:"sessionType"`
 }
 
+func settingsCachePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(home, ".azsh")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "settings.json"), nil
+}
+
+func readCachedSettings() (*Properties, error) {
+	path, err := settingsCachePath()
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	settings := &Settings{}
+	if err := json.Unmarshal(data, settings); err != nil {
+		return nil, err
+	}
+	return &settings.Properties, nil
+}
+
+func writeCachedSettings(props *Properties) error {
+	path, err := settingsCachePath()
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(Settings{Properties: *props})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0600)
+}
+
 func GetUserSettings(token string) (*Properties, error) {
+	if props, err := readCachedSettings(); err == nil {
+		return props, nil
+	}
+
 	req, err := http.NewRequest(http.MethodGet, userSettingsURL, nil)
 	if err != nil {
 		return nil, err
@@ -40,6 +86,8 @@ func GetUserSettings(token string) (*Properties, error) {
 	if err := json.Unmarshal(data, settings); err != nil {
 		return nil, err
 	}
+
+	writeCachedSettings(&settings.Properties)
 
 	return &settings.Properties, nil
 }

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 type ConsoleResponse struct {
@@ -24,7 +26,61 @@ type TerminalResponse struct {
 	TokenUpdated bool   `json:"tokenUpdated"`
 }
 
+func consoleCachePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(home, ".azsh")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "console.json"), nil
+}
+
+func readCachedConsole() (*ConsoleResponse, error) {
+	path, err := consoleCachePath()
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var cr ConsoleResponse
+	if err := json.Unmarshal(data, &cr); err != nil {
+		return nil, err
+	}
+	return &cr, nil
+}
+
+func writeCachedConsole(cr *ConsoleResponse) error {
+	path, err := consoleCachePath()
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(cr)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0600)
+}
+
 func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse, error) {
+	if cr, err := readCachedConsole(); err == nil && cr.Properties.OsType == osType {
+		authURI := cr.Properties.URI + "/authorize"
+		req, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
+		setCommonHeaders(req, token)
+		setContentTypeJSON(req)
+		resp, _, authErr := executeRequest(req)
+		if authErr == nil && checkStatus(resp.StatusCode) == nil {
+			return cr, nil
+		}
+		if path, err := consoleCachePath(); err == nil {
+			os.Remove(path)
+		}
+	}
+
 	payload := fmt.Sprintf(`{"properties":{"osType":"%s"}}`, osType)
 	req, err := http.NewRequest(http.MethodPut, consoleURL, bytes.NewBufferString(payload))
 	if err != nil {
@@ -51,28 +107,24 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 		return nil, err
 	}
 
+	authURI := consoleResp.Properties.URI + "/authorize"
+	authReq, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
+	setCommonHeaders(authReq, token)
+	setContentTypeJSON(authReq)
+	authResp, _, authErr := executeRequest(authReq)
+	if authErr != nil {
+		return nil, fmt.Errorf("authorize console: %w", authErr)
+	}
+	if err := checkStatus(authResp.StatusCode); err != nil {
+		return nil, fmt.Errorf("authorize console: %s", authResp.Status)
+	}
+
+	writeCachedConsole(&consoleResp)
+
 	return &consoleResp, nil
 }
 
 func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*TerminalResponse, error) {
-	authURI := fmt.Sprintf("%s/authorize", consoleURI)
-	authReq, err := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
-	if err != nil {
-		return nil, err
-	}
-
-	setCommonHeaders(authReq, token)
-	setContentTypeJSON(authReq)
-
-	authResp, authData, err := executeRequest(authReq)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := checkStatus(authResp.StatusCode); err != nil {
-		return nil, fmt.Errorf("authorize container: %s - %s", authResp.Status, string(authData))
-	}
-
 	termURI := fmt.Sprintf("%s/terminals?cols=%d&rows=%d&version=%s&shell=%s", consoleURI, cols, rows, terminalVersion, shell)
 	termReq, err := http.NewRequest(http.MethodPost, termURI, bytes.NewBufferString("{}"))
 	if err != nil {

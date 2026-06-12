@@ -133,5 +133,13 @@ func RegisterUserSettings(token, subscriptionID, location string) error {
 		return fmt.Errorf("user settings registration failed: %s, response: %s", resp.Status, string(data))
 	}
 
+	writeCachedSettings(&Properties{
+		PreferredOsType:    payload.Properties.PreferredOsType,
+		PreferredLocation:  payload.Properties.PreferredLocation,
+		PreferredShellType: payload.Properties.PreferredShellType,
+		NetworkType:        payload.Properties.NetworkType,
+		SessionType:        payload.Properties.SessionType,
+	})
+
 	return nil
 }

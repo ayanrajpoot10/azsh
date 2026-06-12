@@ -23,13 +23,13 @@ func init() {
 }
 
 func runConnectCmd(cmd *cobra.Command, args []string) error {
-	token, err := auth.Authenticate()
+	t, err := auth.Authenticate()
 	if err != nil {
 		return fmt.Errorf("auth failed: %w", err)
 	}
 
-	fmt.Println("Fetching user settings...")
-	settings, err := cloudshell.GetUserSettings(token)
+
+	settings, err := cloudshell.GetUserSettings(t)
 	if err != nil {
 		if cloudshell.IsUserSettingsNotFound(err) {
 			return fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
@@ -37,12 +37,10 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("user settings: %w", err)
 	}
 
-	fmt.Print("Requesting a Cloud Shell... ")
-	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
+	consoleRes, err := cloudshell.ProvisionConsole(t, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		return fmt.Errorf("failed to provision console: %w", err)
 	}
-	fmt.Println("Succeeded.")
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
@@ -50,8 +48,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		height = 30
 	}
 
-	fmt.Println("Connecting terminal...")
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
 	if err != nil {
 		return fmt.Errorf("failed to negotiate terminal: %w", err)
 	}
@@ -62,7 +59,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	terminal.HandleResize(func(w, h int) {
-		cloudshell.ResizeTerminal(token, consoleRes.Properties.URI, terminalInfo.ID, w, h)
+		cloudshell.ResizeTerminal(t, consoleRes.Properties.URI, terminalInfo.ID, w, h)
 	})
 
 	if err := terminal.Connect(wsURL); err != nil {
