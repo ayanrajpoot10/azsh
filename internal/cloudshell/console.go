@@ -151,6 +151,27 @@ func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*Termin
 	return &terminal, nil
 }
 
+func DeleteConsole(token string) error {
+	req, err := http.NewRequest(http.MethodDelete, consoleURL, bytes.NewBufferString("{}"))
+	if err != nil {
+		return err
+	}
+
+	setCommonHeaders(req, token)
+	req.Header.Set("content-type", "text/plain;charset=UTF-8")
+
+	resp, data, err := executeRequest(req)
+	if err != nil {
+		return err
+	}
+
+	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusNoContent); err != nil {
+		return fmt.Errorf("delete console: %s, response: %s", resp.Status, string(data))
+	}
+
+	return nil
+}
+
 func ResizeTerminal(token, consoleURI, terminalID string, cols, rows int) error {
 	uri := fmt.Sprintf("%s/terminals/%s/size?cols=%d&rows=%d&version=%s", consoleURI, terminalID, cols, rows, terminalVersion)
 	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewBufferString("{}"))

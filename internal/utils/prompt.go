@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+func PromptInput(prompt string) (string, error) {
+	fmt.Print(prompt + " ")
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(input), nil
+}
+
 func PromptSelect(prompt string, options []string) (int, error) {
 	fmt.Println(prompt)
 	for i, opt := range options {

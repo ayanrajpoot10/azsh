@@ -14,11 +14,12 @@ type Settings struct {
 }
 
 type Properties struct {
-	PreferredOsType    string `json:"preferredOsType"`
-	PreferredLocation  string `json:"preferredLocation"`
-	PreferredShellType string `json:"preferredShellType"`
-	NetworkType        string `json:"networkType"`
-	SessionType        string `json:"sessionType"`
+	PreferredOsType    string          `json:"preferredOsType"`
+	PreferredLocation  string          `json:"preferredLocation"`
+	PreferredShellType string          `json:"preferredShellType"`
+	NetworkType        string          `json:"networkType"`
+	SessionType        string          `json:"sessionType"`
+	StorageProfile     *StorageProfile `json:"storageProfile,omitempty"`
 }
 
 func settingsCachePath() (string, error) {
@@ -90,6 +91,26 @@ func GetUserSettings(token string) (*Properties, error) {
 	writeCachedSettings(&settings.Properties)
 
 	return &settings.Properties, nil
+}
+
+func DeleteUserSettings(token string) error {
+	req, err := http.NewRequest(http.MethodDelete, userSettingsURL, nil)
+	if err != nil {
+		return err
+	}
+
+	setCommonHeaders(req, token)
+
+	resp, data, err := executeRequest(req)
+	if err != nil {
+		return err
+	}
+
+	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusNoContent); err != nil {
+		return fmt.Errorf("delete user settings: %s, response: %s", resp.Status, string(data))
+	}
+
+	return nil
 }
 
 func IsUserSettingsNotFound(err error) bool {
