@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	"github.com/ayanrajpoot10/azsh/internal/auth"
 	"github.com/ayanrajpoot10/azsh/internal/cloudshell"
@@ -41,13 +39,7 @@ func runUploadCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("provision console: %w", err)
 	}
 
-	width, height, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		width = 120
-		height = 30
-	}
-
-	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, 120, 30)
 	if err != nil {
 		return fmt.Errorf("negotiate terminal: %w", err)
 	}

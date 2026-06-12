@@ -43,8 +43,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		width = 120
-		height = 30
+		width, height = 120, 30
 	}
 
 	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, width, height)
