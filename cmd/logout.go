@@ -3,9 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
+
+	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
 var logoutCmd = &cobra.Command{
@@ -19,12 +20,11 @@ func init() {
 }
 
 func runLogoutCmd(cmd *cobra.Command, args []string) error {
-	home, err := os.UserHomeDir()
+	path, err := utils.CachePath("token.json")
 	if err != nil {
 		return err
 	}
 
-	path := filepath.Join(home, ".azsh", "token.json")
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("not logged in")

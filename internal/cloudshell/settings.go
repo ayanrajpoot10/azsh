@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ayanrajpoot10/azsh/internal/arm"
+	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
 type Settings struct {
@@ -31,20 +31,8 @@ type StorageProfile struct {
 	DiskSizeInGB             int    `json:"diskSizeInGB"`
 }
 
-func settingsCachePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".azsh")
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "settings.json"), nil
-}
-
 func readCachedSettings() (*Properties, error) {
-	path, err := settingsCachePath()
+	path, err := utils.CachePath("settings.json")
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +48,7 @@ func readCachedSettings() (*Properties, error) {
 }
 
 func writeCachedSettings(props *Properties) error {
-	path, err := settingsCachePath()
+	path, err := utils.CachePath("settings.json")
 	if err != nil {
 		return err
 	}

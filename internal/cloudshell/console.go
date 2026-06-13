@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/ayanrajpoot10/azsh/internal/arm"
+	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
 type ConsoleResponse struct {
@@ -28,20 +28,8 @@ type TerminalResponse struct {
 	TokenUpdated bool   `json:"tokenUpdated"`
 }
 
-func consoleCachePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".azsh")
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "console.json"), nil
-}
-
 func readCachedConsole() (*ConsoleResponse, error) {
-	path, err := consoleCachePath()
+	path, err := utils.CachePath("console.json")
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +45,7 @@ func readCachedConsole() (*ConsoleResponse, error) {
 }
 
 func writeCachedConsole(cr *ConsoleResponse) error {
-	path, err := consoleCachePath()
+	path, err := utils.CachePath("console.json")
 	if err != nil {
 		return err
 	}
@@ -78,7 +66,7 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 		if authErr == nil && arm.CheckStatus(resp.StatusCode) == nil {
 			return cr, nil
 		}
-		if path, err := consoleCachePath(); err == nil {
+		if path, err := utils.CachePath("console.json"); err == nil {
 			os.Remove(path)
 		}
 	}

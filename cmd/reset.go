@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/ayanrajpoot10/azsh/internal/auth"
 	"github.com/ayanrajpoot10/azsh/internal/cloudshell"
+	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
 var resetCmd = &cobra.Command{
@@ -39,10 +39,11 @@ func runResetCmd(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println("User settings deleted.")
 
-	home, _ := os.UserHomeDir()
-	cacheDir := filepath.Join(home, ".azsh")
 	for _, name := range []string{"settings.json", "console.json"} {
-		path := filepath.Join(cacheDir, name)
+		path, err := utils.CachePath(name)
+		if err != nil {
+			continue
+		}
 		if err := os.Remove(path); err == nil {
 			fmt.Printf("Removed local cache: %s\n", name)
 		}
