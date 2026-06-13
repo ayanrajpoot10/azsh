@@ -9,9 +9,9 @@ import (
 	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
-type tokenCache struct{}
+type fileCache struct{}
 
-func (tokenCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.ReplaceHints) error {
+func (fileCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.ReplaceHints) error {
 	path, err := utils.CachePath("token.json")
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func (tokenCache) Replace(ctx context.Context, c cache.Unmarshaler, hints cache.
 	return c.Unmarshal(data)
 }
 
-func (tokenCache) Export(ctx context.Context, c cache.Marshaler, hints cache.ExportHints) error {
+func (fileCache) Export(ctx context.Context, c cache.Marshaler, hints cache.ExportHints) error {
 	data, err := c.Marshal()
 	if err != nil {
 		return err

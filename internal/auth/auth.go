@@ -32,11 +32,9 @@ type tenantsResponse struct {
 	Value []tenant `json:"value"`
 }
 
-// newClient creates an MSAL public client with shared defaults.
-// Pass an empty tenantID to omit the WithAuthority option.
 func newClient(tenantID string) (public.Client, error) {
 	opts := []public.Option{
-		public.WithCache(tokenCache{}),
+		public.WithCache(fileCache{}),
 		public.WithHTTPClient(httpClient),
 		public.WithInstanceDiscovery(false),
 	}
