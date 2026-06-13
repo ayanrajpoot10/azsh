@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/ayanrajpoot10/azsh/internal/arm"
 )
 
 type ConsoleResponse struct {
@@ -70,10 +72,10 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 	if cr, err := readCachedConsole(); err == nil && cr.Properties.OsType == osType {
 		authURI := cr.Properties.URI + "/authorize"
 		req, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
-		setCommonHeaders(req, token)
-		setContentTypeJSON(req)
-		resp, _, authErr := executeRequest(req)
-		if authErr == nil && checkStatus(resp.StatusCode) == nil {
+		arm.SetCommonHeaders(req, token)
+		arm.SetContentTypeJSON(req)
+		resp, _, authErr := arm.ExecuteRequest(req)
+		if authErr == nil && arm.CheckStatus(resp.StatusCode) == nil {
 			return cr, nil
 		}
 		if path, err := consoleCachePath(); err == nil {
@@ -87,18 +89,18 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 		return nil, err
 	}
 
-	setCommonHeaders(req, token)
-	setContentTypeJSON(req)
+	arm.SetCommonHeaders(req, token)
+	arm.SetContentTypeJSON(req)
 	if preferredLocation != "" {
 		req.Header.Set("x-ms-console-preferred-location", preferredLocation)
 	}
 
-	resp, data, err := executeRequest(req)
+	resp, data, err := arm.ExecuteRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
+	if err := arm.CheckStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
 		return nil, fmt.Errorf("console provisioning: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -109,13 +111,13 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 
 	authURI := consoleResp.Properties.URI + "/authorize"
 	authReq, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
-	setCommonHeaders(authReq, token)
-	setContentTypeJSON(authReq)
-	authResp, _, authErr := executeRequest(authReq)
+	arm.SetCommonHeaders(authReq, token)
+	arm.SetContentTypeJSON(authReq)
+	authResp, _, authErr := arm.ExecuteRequest(authReq)
 	if authErr != nil {
 		return nil, fmt.Errorf("authorize console: %w", authErr)
 	}
-	if err := checkStatus(authResp.StatusCode); err != nil {
+	if err := arm.CheckStatus(authResp.StatusCode); err != nil {
 		return nil, fmt.Errorf("authorize console: %s", authResp.Status)
 	}
 
@@ -131,15 +133,15 @@ func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*Termin
 		return nil, err
 	}
 
-	setCommonHeaders(termReq, token)
-	setContentTypeJSON(termReq)
+	arm.SetCommonHeaders(termReq, token)
+	arm.SetContentTypeJSON(termReq)
 
-	resp, data, err := executeRequest(termReq)
+	resp, data, err := arm.ExecuteRequest(termReq)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := checkStatus(resp.StatusCode); err != nil {
+	if err := arm.CheckStatus(resp.StatusCode); err != nil {
 		return nil, fmt.Errorf("negotiate terminal: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -157,15 +159,15 @@ func DeleteConsole(token string) error {
 		return err
 	}
 
-	setCommonHeaders(req, token)
+	arm.SetCommonHeaders(req, token)
 	req.Header.Set("content-type", "text/plain;charset=UTF-8")
 
-	resp, data, err := executeRequest(req)
+	resp, data, err := arm.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
 
-	if err := checkStatus(resp.StatusCode, http.StatusOK, http.StatusNoContent); err != nil {
+	if err := arm.CheckStatus(resp.StatusCode, http.StatusOK, http.StatusNoContent); err != nil {
 		return fmt.Errorf("delete console: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -179,15 +181,15 @@ func ResizeTerminal(token, consoleURI, terminalID string, cols, rows int) error 
 		return err
 	}
 
-	setCommonHeaders(req, token)
-	setContentTypeJSON(req)
+	arm.SetCommonHeaders(req, token)
+	arm.SetContentTypeJSON(req)
 
-	resp, data, err := executeRequest(req)
+	resp, data, err := arm.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
 
-	if err := checkStatus(resp.StatusCode); err != nil {
+	if err := arm.CheckStatus(resp.StatusCode); err != nil {
 		return fmt.Errorf("resize terminal: %s, response: %s", resp.Status, string(data))
 	}
 

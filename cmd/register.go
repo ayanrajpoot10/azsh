@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/ayanrajpoot10/azsh/internal/arm"
 	"github.com/ayanrajpoot10/azsh/internal/auth"
 	"github.com/ayanrajpoot10/azsh/internal/cloudshell"
 	"github.com/ayanrajpoot10/azsh/internal/utils"
@@ -29,7 +30,7 @@ func runRegisterCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("Fetching subscriptions...")
-	subscriptions, err := cloudshell.ListSubscriptions(token)
+	subscriptions, err := arm.ListSubscriptions(token)
 	if err != nil {
 		return fmt.Errorf("list subscriptions: %w", err)
 	}
@@ -117,7 +118,7 @@ func runRegisterCmd(cmd *cobra.Command, args []string) error {
 
 func selectExistingStorage(token, subID string) (*cloudshell.StorageProfile, string, error) {
 	fmt.Println("Fetching resource groups...")
-	rgs, err := cloudshell.ListResourceGroups(token, subID)
+	rgs, err := arm.ListResourceGroups(token, subID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -138,7 +139,7 @@ func selectExistingStorage(token, subID string) (*cloudshell.StorageProfile, str
 	location := rgs[rgIdx].Location
 
 	fmt.Println("Fetching storage accounts...")
-	accounts, err := cloudshell.ListStorageAccounts(token, subID, rgName)
+	accounts, err := arm.ListStorageAccounts(token, subID, rgName)
 	if err != nil {
 		return nil, "", fmt.Errorf("list storage accounts: %w", err)
 	}
@@ -155,7 +156,7 @@ func selectExistingStorage(token, subID string) (*cloudshell.StorageProfile, str
 		return nil, "", err
 	}
 
-	_, fileShareName := cloudshell.GenerateStorageNames(token)
+	_, fileShareName := arm.GenerateStorageNames(token)
 
 	return &cloudshell.StorageProfile{
 		StorageAccountResourceID: accounts[acctIdx].ID,
@@ -165,7 +166,7 @@ func selectExistingStorage(token, subID string) (*cloudshell.StorageProfile, str
 }
 
 func autoSetupStorage(token, subID, location string) (*cloudshell.StorageProfile, error) {
-	acctName, fileShareName := cloudshell.GenerateStorageNames(token)
+	acctName, fileShareName := arm.GenerateStorageNames(token)
 	if acctName == "" {
 		return nil, fmt.Errorf("could not generate storage account name from token")
 	}
@@ -173,19 +174,19 @@ func autoSetupStorage(token, subID, location string) (*cloudshell.StorageProfile
 	autoRGName := "cloud-shell-storage-" + location
 
 	fmt.Printf("Creating resource group %s...\n", autoRGName)
-	if err := cloudshell.CreateResourceGroup(token, subID, autoRGName, location); err != nil {
+	if err := arm.CreateResourceGroup(token, subID, autoRGName, location); err != nil {
 		return nil, fmt.Errorf("create resource group: %w", err)
 	}
 	fmt.Println("Resource group created.")
 
 	fmt.Printf("Creating storage account %s...\n", acctName)
-	if err := cloudshell.CreateStorageAccount(token, subID, autoRGName, acctName, location); err != nil {
+	if err := arm.CreateStorageAccount(token, subID, autoRGName, acctName, location); err != nil {
 		return nil, fmt.Errorf("create storage account: %w", err)
 	}
 	fmt.Println("Storage account created.")
 
 	fmt.Println("Registering Microsoft.CloudShell resource provider...")
-	if err := cloudshell.RegisterCloudShellRP(token, subID); err != nil {
+	if err := arm.RegisterCloudShellRP(token, subID); err != nil {
 		return nil, fmt.Errorf("register RP: %w", err)
 	}
 

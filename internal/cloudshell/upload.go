@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/ayanrajpoot10/azsh/internal/arm"
 )
 
 func UploadFile(token, consoleURI, terminalID, filePath string) error {
@@ -34,15 +36,15 @@ func UploadFile(token, consoleURI, terminalID, filePath string) error {
 		return fmt.Errorf("create request: %w", err)
 	}
 
-	setCommonHeaders(req, token)
+	arm.SetCommonHeaders(req, token)
 	req.Header.Set("content-type", writer.FormDataContentType())
 
-	resp, data, err := executeRequest(req)
+	resp, data, err := arm.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
 
-	if err := checkStatus(resp.StatusCode); err != nil {
+	if err := arm.CheckStatus(resp.StatusCode); err != nil {
 		return fmt.Errorf("upload: %s, response: %s", resp.Status, string(data))
 	}
 
