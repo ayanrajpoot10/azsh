@@ -32,6 +32,20 @@ type tenantsResponse struct {
 	Value []tenant `json:"value"`
 }
 
+// newClient creates an MSAL public client with shared defaults.
+// Pass an empty tenantID to omit the WithAuthority option.
+func newClient(tenantID string) (public.Client, error) {
+	opts := []public.Option{
+		public.WithCache(tokenCache{}),
+		public.WithHTTPClient(httpClient),
+		public.WithInstanceDiscovery(false),
+	}
+	if tenantID != "" {
+		opts = append(opts, public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenantID)))
+	}
+	return public.New(clientID, opts...)
+}
+
 func Authenticate() (string, error) {
 	token, err := silentAuth()
 	if err == nil {
@@ -43,12 +57,12 @@ func Authenticate() (string, error) {
 		return "", fmt.Errorf("interactive login: %w", err)
 	}
 
-	tenant, err := selectTenant(token)
+	tenantID, err := selectTenant(token)
 	if err != nil {
 		return "", fmt.Errorf("tenant selection: %w", err)
 	}
 
-	token, err = tokenForTenant(tenant)
+	token, err = tokenForTenant(tenantID)
 	if err != nil {
 		return "", fmt.Errorf("tenant token: %w", err)
 	}
@@ -58,12 +72,7 @@ func Authenticate() (string, error) {
 
 func silentAuth() (string, error) {
 	ctx := context.Background()
-	client, err := public.New(
-		clientID,
-		public.WithCache(tokenCache{}),
-		public.WithHTTPClient(httpClient),
-		public.WithInstanceDiscovery(false),
-	)
+	client, err := newClient("")
 	if err != nil {
 		return "", err
 	}
@@ -92,13 +101,7 @@ func silentAuth() (string, error) {
 func interactiveLogin() (string, error) {
 	ctx := context.Background()
 
-	client, err := public.New(
-		clientID,
-		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, defaultTenantID)),
-		public.WithCache(tokenCache{}),
-		public.WithHTTPClient(httpClient),
-		public.WithInstanceDiscovery(false),
-	)
+	client, err := newClient(defaultTenantID)
 	if err != nil {
 		return "", err
 	}
@@ -148,16 +151,10 @@ func interactiveLogin() (string, error) {
 	return result.AccessToken, nil
 }
 
-func tokenForTenant(tenant string) (string, error) {
+func tokenForTenant(tenantID string) (string, error) {
 	ctx := context.Background()
 
-	client, err := public.New(
-		clientID,
-		public.WithAuthority(fmt.Sprintf("%s/%s", msLoginBase, tenant)),
-		public.WithCache(tokenCache{}),
-		public.WithHTTPClient(httpClient),
-		public.WithInstanceDiscovery(false),
-	)
+	client, err := newClient(tenantID)
 	if err != nil {
 		return "", err
 	}
@@ -170,62 +167,53 @@ func tokenForTenant(tenant string) (string, error) {
 	for _, account := range accounts {
 		result, err := client.AcquireTokenSilent(ctx, []string{defaultScope},
 			public.WithSilentAccount(account),
-			public.WithTenantID(tenant),
+			public.WithTenantID(tenantID),
 		)
 		if err == nil {
 			return result.AccessToken, nil
 		}
 	}
 
-	return "", fmt.Errorf("token for tenant %s", tenant)
+	return "", fmt.Errorf("token for tenant %s", tenantID)
 }
 
 func selectTenant(token string) (string, error) {
-	tenants, err := getTenants(token)
+	req, err := http.NewRequest(http.MethodGet, "https://management.azure.com/tenants?api-version=2020-01-01", nil)
 	if err != nil {
 		return "", err
 	}
+	req.Header.Set("Authorization", "Bearer "+token)
 
-	if len(tenants) == 1 {
-		return tenants[0].ID, nil
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("list tenants: %s", resp.Status)
 	}
 
-	options := make([]string, len(tenants))
-	for i, t := range tenants {
+	var tr tenantsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return "", err
+	}
+
+	if len(tr.Value) == 0 {
+		return "", fmt.Errorf("no tenants found")
+	}
+
+	if len(tr.Value) == 1 {
+		return tr.Value[0].ID, nil
+	}
+
+	options := make([]string, len(tr.Value))
+	for i, t := range tr.Value {
 		options[i] = t.ID
 	}
 	idx, err := utils.PromptSelect("\nMultiple tenants found. Please select one:", options)
 	if err != nil {
 		return "", err
 	}
-	return tenants[idx].ID, nil
-}
-
-func getTenants(token string) ([]tenant, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://management.azure.com/tenants?api-version=2020-01-01", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("tenants: %s", resp.Status)
-	}
-
-	var tr tenantsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
-		return nil, err
-	}
-
-	if len(tr.Value) == 0 {
-		return nil, fmt.Errorf("no tenants found")
-	}
-
-	return tr.Value, nil
+	return tr.Value[idx].ID, nil
 }
