@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/ayanrajpoot10/azsh/internal/arm"
 	"github.com/ayanrajpoot10/azsh/internal/utils"
@@ -57,18 +58,8 @@ func writeCachedConsole(cr *ConsoleResponse) error {
 }
 
 func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse, error) {
-	if cr, err := readCachedConsole(); err == nil && cr.Properties.OsType == osType {
-		authURI := cr.Properties.URI + "/authorize"
-		req, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
-		arm.SetCommonHeaders(req, token)
-		arm.SetContentTypeJSON(req)
-		resp, _, authErr := arm.ExecuteRequest(req)
-		if authErr == nil && arm.CheckStatus(resp.StatusCode) == nil {
-			return cr, nil
-		}
-		if path, err := utils.CachePath("console.json"); err == nil {
-			os.Remove(path)
-		}
+	if cr, err := readCachedConsole(); err == nil && strings.EqualFold(cr.Properties.OsType, osType) {
+		return cr, nil
 	}
 
 	payload := fmt.Sprintf(`{"properties":{"osType":"%s"}}`, osType)
