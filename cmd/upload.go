@@ -21,12 +21,12 @@ func init() {
 }
 
 func runUploadCmd(cmd *cobra.Command, args []string) error {
-	t, err := auth.Authenticate()
+	token, err := auth.Authenticate()
 	if err != nil {
 		return fmt.Errorf("authenticate: %w", err)
 	}
 
-	settings, err := cloudshell.GetUserSettings(t)
+	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
 		if cloudshell.IsUserSettingsNotFound(err) {
 			return fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
@@ -34,19 +34,19 @@ func runUploadCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("user settings: %w", err)
 	}
 
-	consoleRes, err := cloudshell.ProvisionConsole(t, settings.PreferredOsType, settings.PreferredLocation)
+	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		return fmt.Errorf("provision console: %w", err)
 	}
 
-	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, settings.PreferredShellType, 120, 30)
+	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, settings.PreferredShellType, 120, 30)
 	if err != nil {
 		return fmt.Errorf("negotiate terminal: %w", err)
 	}
 
 	filePath := args[0]
 	fmt.Printf("Uploading %s...\n", filePath)
-	if err := cloudshell.UploadFile(t, consoleRes.Properties.URI, terminalInfo.ID, filePath); err != nil {
+	if err := cloudshell.UploadFile(token, consoleRes.Properties.URI, terminalInfo.ID, filePath); err != nil {
 		return fmt.Errorf("upload: %w", err)
 	}
 	fmt.Println("Upload complete.")

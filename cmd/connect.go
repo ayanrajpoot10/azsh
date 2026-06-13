@@ -12,13 +12,13 @@ import (
 	"github.com/ayanrajpoot10/azsh/internal/terminal"
 )
 
-var shellConnect string
-
 var connectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect to Azure Cloud Shell",
 	RunE:  runConnectCmd,
 }
+
+var shellConnect string
 
 func init() {
 	rootCmd.AddCommand(connectCmd)
@@ -26,12 +26,12 @@ func init() {
 }
 
 func runConnectCmd(cmd *cobra.Command, args []string) error {
-	t, err := auth.Authenticate()
+	token, err := auth.Authenticate()
 	if err != nil {
 		return fmt.Errorf("authenticate: %w", err)
 	}
 
-	settings, err := cloudshell.GetUserSettings(t)
+	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
 		if cloudshell.IsUserSettingsNotFound(err) {
 			return fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
@@ -39,7 +39,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("user settings: %w", err)
 	}
 
-	consoleRes, err := cloudshell.ProvisionConsole(t, settings.PreferredOsType, settings.PreferredLocation)
+	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		return fmt.Errorf("provision console: %w", err)
 	}
@@ -49,7 +49,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		width, height = 120, 30
 	}
 
-	terminalInfo, err := cloudshell.NegotiateTerminal(t, consoleRes.Properties.URI, shellConnect, width, height)
+	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, shellConnect, width, height)
 	if err != nil {
 		return fmt.Errorf("negotiate terminal: %w", err)
 	}
@@ -60,7 +60,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	terminal.HandleResize(func(w, h int) {
-		cloudshell.ResizeTerminal(t, consoleRes.Properties.URI, terminalInfo.ID, w, h)
+		cloudshell.ResizeTerminal(token, consoleRes.Properties.URI, terminalInfo.ID, w, h)
 	})
 
 	if err := terminal.Connect(wsURL); err != nil {
