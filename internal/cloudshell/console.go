@@ -114,7 +114,7 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 	return &consoleResp, nil
 }
 
-func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*TerminalResponse, error) {
+func CreateTerminal(token, consoleURI, shell string, cols, rows int) (*TerminalResponse, error) {
 	termURI := fmt.Sprintf("%s/terminals?cols=%d&rows=%d&version=%s&shell=%s", consoleURI, cols, rows, terminalVersion, shell)
 	termReq, err := http.NewRequest(http.MethodPost, termURI, bytes.NewBufferString("{}"))
 	if err != nil {
@@ -130,7 +130,7 @@ func NegotiateTerminal(token, consoleURI, shell string, cols, rows int) (*Termin
 	}
 
 	if err := arm.CheckStatus(resp.StatusCode); err != nil {
-		return nil, fmt.Errorf("negotiate terminal: %s, response: %s", resp.Status, string(data))
+		return nil, fmt.Errorf("create terminal: %s, response: %s", resp.Status, string(data))
 	}
 
 	var terminal TerminalResponse

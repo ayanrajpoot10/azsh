@@ -41,9 +41,9 @@ func runExecCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("provision console: %w", err)
 	}
 
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, settings.PreferredShellType, 120, 30)
+	terminalInfo, err := cloudshell.CreateTerminal(token, consoleRes.Properties.URI, settings.PreferredShellType, 120, 30)
 	if err != nil {
-		return fmt.Errorf("negotiate terminal: %w", err)
+		return fmt.Errorf("create terminal: %w", err)
 	}
 
 	wsURL, err := cloudshell.BuildWebSocketURL(consoleRes.Properties.URI, terminalInfo.ID)

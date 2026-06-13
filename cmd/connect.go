@@ -49,9 +49,9 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		width, height = 120, 30
 	}
 
-	terminalInfo, err := cloudshell.NegotiateTerminal(token, consoleRes.Properties.URI, shellConnect, width, height)
+	terminalInfo, err := cloudshell.CreateTerminal(token, consoleRes.Properties.URI, shellConnect, width, height)
 	if err != nil {
-		return fmt.Errorf("negotiate terminal: %w", err)
+		return fmt.Errorf("create terminal: %w", err)
 	}
 
 	wsURL, err := cloudshell.BuildWebSocketURL(consoleRes.Properties.URI, terminalInfo.ID)
