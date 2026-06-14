@@ -1,17 +1,11 @@
 package auth
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-
-	"io"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
-	"github.com/atotto/clipboard"
-	"github.com/pkg/browser"
 
 	"github.com/ayanrajpoot10/azsh/internal/arm"
 	"github.com/ayanrajpoot10/azsh/internal/utils"
@@ -98,42 +92,9 @@ func interactiveLogin() (string, error) {
 		return "", err
 	}
 
-	dc, err := client.AcquireTokenByDeviceCode(ctx, []string{defaultScope}, public.WithTenantID(defaultTenantID))
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println()
-	fmt.Println("To sign in, open:")
-	fmt.Printf("  %s\n", dc.Result.VerificationURL)
-	fmt.Println()
-	fmt.Println("And enter the code:")
-	fmt.Printf("  %s\n", dc.Result.UserCode)
-	fmt.Println()
-
-	fmt.Print("Press Enter to copy code and open browser...")
-	bufio.NewScanner(os.Stdin).Scan()
-
-	if err := clipboard.WriteAll(dc.Result.UserCode); err != nil {
-		fmt.Println()
-		fmt.Printf("Warning: failed to copy code to clipboard: %v\n", err)
-	}
-	fmt.Println()
-	fmt.Println("✓ Device code copied! Opening browser...")
-	fmt.Println()
-	browser.Stderr = io.Discard
-	if err := browser.OpenURL(dc.Result.VerificationURL); err != nil {
-		fmt.Printf("Warning: failed to open browser: %v\n", err)
-	}
-
-	deviceCtx := ctx
-	if !dc.Result.ExpiresOn.IsZero() {
-		var cancel context.CancelFunc
-		deviceCtx, cancel = context.WithDeadline(ctx, dc.Result.ExpiresOn)
-		defer cancel()
-	}
-
-	result, err := dc.AuthenticationResult(deviceCtx)
+	result, err := client.AcquireTokenInteractive(ctx, []string{defaultScope},
+		public.WithTenantID(defaultTenantID),
+	)
 	if err != nil {
 		return "", err
 	}
