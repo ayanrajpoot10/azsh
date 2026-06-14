@@ -6,7 +6,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:           "azsh",
-	Short:         "Lightweight CLI for Azure Cloud Shell",
+	Short:         "A CLI client for Azure Cloud Shell",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
