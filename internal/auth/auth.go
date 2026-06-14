@@ -3,7 +3,6 @@ package auth
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/pkg/browser"
 
+	"github.com/ayanrajpoot10/azsh/internal/arm"
 	"github.com/ayanrajpoot10/azsh/internal/utils"
 )
 
@@ -23,14 +23,6 @@ const (
 )
 
 var httpClient = &http.Client{}
-
-type tenant struct {
-	ID string `json:"tenantId"`
-}
-
-type tenantsResponse struct {
-	Value []tenant `json:"value"`
-}
 
 func newClient(tenantID string) (public.Client, error) {
 	opts := []public.Option{
@@ -176,42 +168,26 @@ func tokenForTenant(tenantID string) (string, error) {
 }
 
 func selectTenant(token string) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://management.azure.com/tenants?api-version=2020-01-01", nil)
+	tenants, err := arm.ListTenants(token)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
 
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("list tenants: %s", resp.Status)
-	}
-
-	var tr tenantsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
-		return "", err
-	}
-
-	if len(tr.Value) == 0 {
+	if len(tenants) == 0 {
 		return "", fmt.Errorf("no tenants found")
 	}
 
-	if len(tr.Value) == 1 {
-		return tr.Value[0].ID, nil
+	if len(tenants) == 1 {
+		return tenants[0].ID, nil
 	}
 
-	options := make([]string, len(tr.Value))
-	for i, t := range tr.Value {
+	options := make([]string, len(tenants))
+	for i, t := range tenants {
 		options[i] = t.ID
 	}
 	idx, err := utils.PromptSelect("\nMultiple tenants found. Please select one:", options)
 	if err != nil {
 		return "", err
 	}
-	return tr.Value[idx].ID, nil
+	return tenants[idx].ID, nil
 }

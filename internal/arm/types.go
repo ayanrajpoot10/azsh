@@ -22,6 +22,10 @@ type StorageAccountInfo struct {
 	} `json:"properties"`
 }
 
+type Tenant struct {
+	ID string `json:"tenantId"`
+}
+
 type storageAccountCreatePayload struct {
 	Location   string            `json:"location"`
 	Sku        map[string]string `json:"sku"`

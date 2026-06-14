@@ -12,6 +12,7 @@ const (
 	resourceGroupURL       = "https://management.azure.com/subscriptions/%s/resourceGroups/%s?api-version=2018-07-01"
 	listStorageAccountsURL = "https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts?api-version=2022-09-01"
 	storageAccountURL      = "https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s?api-version=2022-09-01"
+	tenantsURL             = "https://management.azure.com/tenants?api-version=2020-01-01"
 	registerRPURL          = "https://management.azure.com/subscriptions/%s/providers/Microsoft.CloudShell?api-version=2022-12-01"
 	consoleOrigin          = "https://ux.console.azure.com"
 	userAgent              = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"

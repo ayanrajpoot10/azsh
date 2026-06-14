@@ -18,13 +18,13 @@ func isNormalClose(status websocket.StatusCode) bool {
 }
 
 func setupTerminal() (func() error, error) {
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	state, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		return nil, fmt.Errorf("raw terminal: %w", err)
+		return nil, err
 	}
 
 	restore := func() error {
-		return term.Restore(int(os.Stdin.Fd()), oldState)
+		return term.Restore(int(os.Stdin.Fd()), state)
 	}
 
 	return restore, nil
