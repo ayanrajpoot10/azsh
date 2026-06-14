@@ -26,20 +26,24 @@ func init() {
 }
 
 func runConnectCmd(cmd *cobra.Command, args []string) error {
+	fmt.Println("Authenticating...")
 	token, err := auth.Authenticate()
 	if err != nil {
 		return fmt.Errorf("authenticate: %w", err)
 	}
 
+	fmt.Println("Fetching user settings...")
 	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
 		return fmt.Errorf("user settings: %w", err)
 	}
 
+	fmt.Print("Requesting a Cloud Shell... ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		return fmt.Errorf("provision console: %w", err)
 	}
+	fmt.Println("Succeeded.")
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
@@ -60,6 +64,7 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		cloudshell.ResizeTerminal(token, consoleRes.Properties.URI, terminalInfo.ID, w, h)
 	})
 
+	fmt.Println("Connecting terminal...")
 	if err := terminal.Connect(wsURL); err != nil {
 		return fmt.Errorf("websocket: %w", err)
 	}
