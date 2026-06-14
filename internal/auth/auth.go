@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"io"
+
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/atotto/clipboard"
 	"github.com/pkg/browser"
@@ -116,12 +118,13 @@ func interactiveLogin() (string, error) {
 		fmt.Println()
 		fmt.Printf("Warning: failed to copy code to clipboard: %v\n", err)
 	}
-	if err := browser.OpenURL(dc.Result.VerificationURL); err != nil {
-		fmt.Printf("Warning: failed to open browser: %v\n", err)
-	}
 	fmt.Println()
 	fmt.Println("✓ Device code copied! Opening browser...")
 	fmt.Println()
+	browser.Stderr = io.Discard
+	if err := browser.OpenURL(dc.Result.VerificationURL); err != nil {
+		fmt.Printf("Warning: failed to open browser: %v\n", err)
+	}
 
 	deviceCtx := ctx
 	if !dc.Result.ExpiresOn.IsZero() {
