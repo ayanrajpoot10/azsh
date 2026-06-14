@@ -19,7 +19,7 @@ func ListSubscriptions(token string) ([]Subscription, error) {
 		return nil, err
 	}
 
-	if err := CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("list subscriptions: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -47,7 +47,7 @@ func ListResourceGroups(token, subscriptionID string) ([]ResourceGroup, error) {
 		return nil, err
 	}
 
-	if err := CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("list resource groups: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -75,7 +75,7 @@ func ListStorageAccounts(token, subscriptionID, resourceGroup string) ([]Storage
 		return nil, err
 	}
 
-	if err := CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("list storage accounts: %s, response: %s", resp.Status, string(data))
 	}
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/ayanrajpoot10/azsh/internal/arm"
 	"github.com/ayanrajpoot10/azsh/internal/utils"
@@ -76,7 +75,10 @@ func GetUserSettings(token string) (*Properties, error) {
 		return nil, err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
+		}
 		return nil, fmt.Errorf("user settings: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -103,17 +105,12 @@ func DeleteUserSettings(token string) error {
 		return err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode, http.StatusOK, http.StatusNoContent); err != nil {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("delete user settings: %s, response: %s", resp.Status, string(data))
 	}
 
 	return nil
 }
-
-func IsUserSettingsNotFound(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "UserSettingsNotFound")
-}
-
 type registrationPayload struct {
 	Properties registrationProperties `json:"properties"`
 }
@@ -176,7 +173,7 @@ func RegisterUserSettings(token, subscriptionID, location string, storageProfile
 		return err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("user settings registration failed: %s, response: %s", resp.Status, string(data))
 	}
 

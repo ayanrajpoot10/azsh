@@ -46,16 +46,3 @@ func ExecuteRequest(req *http.Request) (*http.Response, []byte, error) {
 	return resp, data, nil
 }
 
-func CheckStatus(statusCode int, allowedCodes ...int) error {
-	if len(allowedCodes) == 0 {
-		allowedCodes = []int{http.StatusOK}
-	}
-
-	for _, code := range allowedCodes {
-		if statusCode == code {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("unexpected status code: %d", statusCode)
-}

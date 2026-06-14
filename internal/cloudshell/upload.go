@@ -44,7 +44,7 @@ func UploadFile(token, consoleURI, terminalID, filePath string) error {
 		return err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("upload: %s, response: %s", resp.Status, string(data))
 	}
 

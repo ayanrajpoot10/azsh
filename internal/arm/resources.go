@@ -25,7 +25,7 @@ func CreateResourceGroup(token, subscriptionID, name, location string) error {
 		return err
 	}
 
-	if err := CheckStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("create resource group: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -72,7 +72,7 @@ func CreateStorageAccount(token, subscriptionID, resourceGroup, accountName, loc
 		return err
 	}
 
-	if err := CheckStatus(resp.StatusCode, http.StatusOK, http.StatusAccepted); err != nil {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("create storage account: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -99,9 +99,9 @@ func pollStorageAccount(token, subscriptionID, resourceGroup, accountName string
 			return err
 		}
 
-		if err := CheckStatus(resp.StatusCode); err != nil {
-			return fmt.Errorf("poll storage account: %s, response: %s", resp.Status, string(data))
-		}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("poll storage account: %s, response: %s", resp.Status, string(data))
+	}
 
 		var account StorageAccountInfo
 		if err := json.Unmarshal(data, &account); err != nil {
@@ -132,7 +132,7 @@ func RegisterCloudShellRP(token, subscriptionID string) error {
 		return err
 	}
 
-	if err := CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("register RP: %s, response: %s", resp.Status, string(data))
 	}
 

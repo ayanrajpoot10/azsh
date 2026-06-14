@@ -66,7 +66,7 @@ func authorizeConsole(token, consoleURI string) error {
 	if err != nil {
 		return fmt.Errorf("authorize console: %w", err)
 	}
-	if err := arm.CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("authorize console: %s, response: %s", resp.Status, string(data))
 	}
 	return nil
@@ -99,7 +99,7 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 		return nil, err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode, http.StatusOK, http.StatusCreated); err != nil {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("console provisioning: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -132,7 +132,7 @@ func CreateTerminal(token, consoleURI, shell string, cols, rows int) (*TerminalR
 		return nil, err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("create terminal: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -158,7 +158,7 @@ func DeleteConsole(token string) error {
 		return err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode, http.StatusOK, http.StatusNoContent); err != nil {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("delete console: %s, response: %s", resp.Status, string(data))
 	}
 
@@ -180,7 +180,7 @@ func ResizeTerminal(token, consoleURI, terminalID string, cols, rows int) error 
 		return err
 	}
 
-	if err := arm.CheckStatus(resp.StatusCode); err != nil {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("resize terminal: %s, response: %s", resp.Status, string(data))
 	}
 

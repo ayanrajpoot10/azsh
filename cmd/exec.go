@@ -30,9 +30,6 @@ func runExecCmd(cmd *cobra.Command, args []string) error {
 
 	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
-		if cloudshell.IsUserSettingsNotFound(err) {
-			return fmt.Errorf("Cloud Shell is not registered. Run 'azsh register' first")
-		}
 		return fmt.Errorf("user settings: %w", err)
 	}
 
