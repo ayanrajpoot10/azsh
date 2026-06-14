@@ -57,9 +57,29 @@ func writeCachedConsole(cr *ConsoleResponse) error {
 	return os.WriteFile(path, data, 0600)
 }
 
+func authorizeConsole(token, consoleURI string) error {
+	authURI := consoleURI + "/authorize"
+	req, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
+	arm.SetCommonHeaders(req, token)
+	arm.SetContentTypeJSON(req)
+	resp, data, err := arm.ExecuteRequest(req)
+	if err != nil {
+		return fmt.Errorf("authorize console: %w", err)
+	}
+	if err := arm.CheckStatus(resp.StatusCode); err != nil {
+		return fmt.Errorf("authorize console: %s, response: %s", resp.Status, string(data))
+	}
+	return nil
+}
+
 func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse, error) {
 	if cr, err := readCachedConsole(); err == nil && strings.EqualFold(cr.Properties.OsType, osType) {
-		return cr, nil
+		if err := authorizeConsole(token, cr.Properties.URI); err == nil {
+			return cr, nil
+		}
+		if path, err := utils.CachePath("console.json"); err == nil {
+			os.Remove(path)
+		}
 	}
 
 	payload := fmt.Sprintf(`{"properties":{"osType":"%s"}}`, osType)
@@ -88,16 +108,8 @@ func ProvisionConsole(token, osType, preferredLocation string) (*ConsoleResponse
 		return nil, err
 	}
 
-	authURI := consoleResp.Properties.URI + "/authorize"
-	authReq, _ := http.NewRequest(http.MethodPost, authURI, bytes.NewBufferString("{}"))
-	arm.SetCommonHeaders(authReq, token)
-	arm.SetContentTypeJSON(authReq)
-	authResp, _, authErr := arm.ExecuteRequest(authReq)
-	if authErr != nil {
-		return nil, fmt.Errorf("authorize console: %w", authErr)
-	}
-	if err := arm.CheckStatus(authResp.StatusCode); err != nil {
-		return nil, fmt.Errorf("authorize console: %s", authResp.Status)
+	if err := authorizeConsole(token, consoleResp.Properties.URI); err != nil {
+		return nil, err
 	}
 
 	writeCachedConsole(&consoleResp)
