@@ -3,9 +3,11 @@ package auth
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+	"github.com/pkg/browser"
 
 	"github.com/ayanrajpoot10/azsh/internal/arm"
 	"github.com/ayanrajpoot10/azsh/internal/utils"
@@ -91,6 +93,8 @@ func interactiveLogin() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	browser.Stderr = io.Discard
 
 	result, err := client.AcquireTokenInteractive(ctx, []string{defaultScope},
 		public.WithTenantID(defaultTenantID),
