@@ -9,9 +9,7 @@ var rootCmd = &cobra.Command{
 	Short:         "A CLI client for Azure Cloud Shell",
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return connectCmd.RunE(connectCmd, args)
-	},
+	RunE:          runConnectCmd,
 }
 
 func Execute() {

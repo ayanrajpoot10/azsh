@@ -32,24 +32,23 @@ func runConnectCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("authenticate: %w", err)
 	}
 
-	fmt.Println("Fetching user settings...")
 	settings, err := cloudshell.GetUserSettings(token)
 	if err != nil {
 		return fmt.Errorf("user settings: %w", err)
 	}
 
-	fmt.Print("Requesting a Cloud Shell... ")
+	fmt.Println("Requesting a Cloud Shell... ")
 	consoleRes, err := cloudshell.ProvisionConsole(token, settings.PreferredOsType, settings.PreferredLocation)
 	if err != nil {
 		return fmt.Errorf("provision console: %w", err)
 	}
-	fmt.Println("Succeeded.")
 
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		width, height = 120, 30
 	}
 
+	fmt.Println("Creating terminal...")
 	terminalInfo, err := cloudshell.CreateTerminal(token, consoleRes.Properties.URI, shellConnect, width, height)
 	if err != nil {
 		return fmt.Errorf("create terminal: %w", err)
