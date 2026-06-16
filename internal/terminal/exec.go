@@ -10,7 +10,7 @@ import (
 	"github.com/coder/websocket"
 )
 
-var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x1b\\`)
+var ansiRe = regexp.MustCompile(`\x1b\[[\x30-\x3f]*[\x20-\x2f]*[\x40-\x7e]|\x1b\].*?\x1b\\`)
 
 func ExecCommand(wsURI, command string) error {
 	ctx := context.Background()
@@ -18,10 +18,9 @@ func ExecCommand(wsURI, command string) error {
 	if err != nil {
 		return fmt.Errorf("websocket dial: %w", err)
 	}
+	sentinel := fmt.Sprintf("__AZSH_EXEC_%x__", rand.Int63())
 
-	readySentinel := fmt.Sprintf("__AZSH_READY_%x__", rand.Int63())
-
-	init := fmt.Sprintf("PS1='' && stty -echo\necho %s\n", readySentinel)
+	init := fmt.Sprintf("PS1='%s'; stty -echo\n", sentinel)
 	if err := conn.Write(ctx, websocket.MessageText, []byte(init)); err != nil {
 		conn.Close(websocket.StatusNormalClosure, "")
 		return fmt.Errorf("write init: %w", err)
@@ -35,14 +34,12 @@ func ExecCommand(wsURI, command string) error {
 			return fmt.Errorf("read init: %w", err)
 		}
 		buf.Write(msg)
-		if strings.Contains(buf.String(), readySentinel) {
+		if strings.Count(buf.String(), sentinel) >= 2 {
 			break
 		}
 	}
 
-	doneSentinel := fmt.Sprintf("__AZSH_DONE_%x__", rand.Int63())
-	fullCmd := fmt.Sprintf("%s\necho %s\n", command, doneSentinel)
-	if err := conn.Write(ctx, websocket.MessageText, []byte(fullCmd)); err != nil {
+	if err := conn.Write(ctx, websocket.MessageText, []byte(command+"\n")); err != nil {
 		conn.Close(websocket.StatusNormalClosure, "")
 		return fmt.Errorf("write command: %w", err)
 	}
@@ -55,7 +52,7 @@ func ExecCommand(wsURI, command string) error {
 			break
 		}
 		buf.Write(msg)
-		if idx := strings.Index(buf.String(), doneSentinel); idx >= 0 {
+		if idx := strings.Index(buf.String(), sentinel); idx >= 0 {
 			out.WriteString(buf.String()[:idx])
 			break
 		}
